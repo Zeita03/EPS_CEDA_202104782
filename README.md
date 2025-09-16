@@ -1,248 +1,371 @@
-<<<<<<< HEAD
-# laminas-mvc-skeleton
+# 🏛️ CEDA - Sistema de Gestión Administrativa
 
-## Introduction
+## 📋 Descripción
 
-This is a skeleton application using the Laminas MVC layer and module
-systems. This application is meant to be used as a starting place for those
-looking to get their feet wet with Laminas MVC.
+CEDA es un sistema web de gestión administrativa desarrollado con **Laminas MVC** (PHP) que incluye funcionalidades de autenticación, administración de usuarios, gestión de perfiles y módulos administrativos.
 
-## Installation using Composer
+## 🛠️ Stack Tecnológico
 
-The easiest way to create a new Laminas MVC project is to use
-[Composer](https://getcomposer.org/). If you don't have it already installed,
-then please install as per the [documentation](https://getcomposer.org/doc/00-intro.md).
+- **Framework**: Laminas MVC (PHP 8.1)
+- **Base de Datos**: MariaDB 10.9
+- **Servidor Web**: Apache 2.4
+- **Contenedores**: Docker & Docker Compose
+- **Gestión de Dependencias**: Composer
+- **Autenticación**: Bcrypt
+- **Frontend**: Bootstrap, jQuery
 
-To create your new Laminas MVC project:
+## 📁 Estructura del Proyecto
+
+```
+CEDA/
+├── config/                 # Configuraciones globales
+│   ├── autoload/          # Configuraciones auto-cargables
+│   ├── application.config.php
+│   └── modules.config.php
+├── data/                  # Datos, cache y logs
+│   ├── cache/
+│   ├── logs/
+│   └── uploads/
+├── docker/                # Configuraciones Docker
+├── module/                # Módulos de la aplicación
+│   ├── Application/       # Módulo base
+│   ├── Auth/             # Autenticación
+│   ├── Administracion/   # Panel administrativo
+│   ├── DPPortada/        # Portada
+│   ├── ORM/              # Acceso a datos
+│   ├── Utilidades/       # Funciones auxiliares
+│   └── Meritos/          # Gestión de méritos
+├── public/               # Punto de entrada web
+│   ├── css/
+│   ├── js/
+│   ├── img/
+│   └── index.php
+├── vendor/               # Dependencias Composer
+├── docker-compose.yml    # Configuración Docker
+├── Dockerfile           # Imagen Docker personalizada
+└── README.md
+```
+
+## 🚀 Instalación y Configuración
+
+### Prerequisitos
+
+- **Docker** >= 20.10
+- **Docker Compose** >= 2.0
+- **Git**
+- **4GB RAM** mínimo disponible
+
+### 1. Clonar el Repositorio
 
 ```bash
-$ composer create-project -sdev laminas/laminas-mvc-skeleton path/to/install
+git clone https://github.com/tuusuario/ceda.git
+cd ceda
 ```
 
-Once installed, you can test it out immediately using PHP's built-in web server:
+### 2. Configurar Permisos
 
 ```bash
-$ cd path/to/install
-$ php -S 0.0.0.0:8080 -t public
-# OR use the composer alias:
-$ composer run --timeout 0 serve
+# Dar permisos a los scripts
+chmod +x init-dev.sh
+chmod +x maintenance.sh
+
+# Crear directorios necesarios
+mkdir -p data/{cache,logs,tmp,uploads,sessions}
+mkdir -p public/{uploads,reports,temp}
 ```
 
-This will start the cli-server on port 8080, and bind it to all network
-interfaces. You can then visit the site at http://localhost:8080/
-- which will bring up Laminas MVC Skeleton welcome page.
-
-**Note:** The built-in CLI server is *for development only*.
-
-## Development mode
-
-The skeleton ships with [laminas-development-mode](https://github.com/laminas/laminas-development-mode)
-by default, and provides three aliases for consuming the script it ships with:
+### 3. Levantar el Ambiente
 
 ```bash
-$ composer development-enable  # enable development mode
-$ composer development-disable # disable development mode
-$ composer development-status  # whether or not development mode is enabled
+# Opción 1: Script automatizado (recomendado)
+./init-dev.sh
+
+# Opción 2: Comandos manuales
+docker-compose up --build -d
 ```
 
-You may provide development-only modules and bootstrap-level configuration in
-`config/development.config.php.dist`, and development-only application
-configuration in `config/autoload/development.local.php.dist`. Enabling
-development mode will copy these files to versions removing the `.dist` suffix,
-while disabling development mode will remove those copies.
+### 4. Verificar la Instalación
 
-Development mode is automatically enabled as part of the skeleton installation process. 
-After making changes to one of the above-mentioned `.dist` configuration files you will
-either need to disable then enable development mode for the changes to take effect,
-or manually make matching updates to the `.dist`-less copies of those files.
+Accede a estas URLs para verificar que todo funcione:
 
-## Running Unit Tests
+- **🌐 Aplicación**: http://localhost:8080
+- **🗄️ phpMyAdmin**: http://localhost:8081
+- **📊 Base de Datos**: localhost:3306
 
-To run the supplied skeleton unit tests, you need to do one of the following:
+## 🔑 Credenciales por Defecto
 
-- During initial project creation, select to install the MVC testing support.
-- After initial project creation, install [laminas-test](https://docs.laminas.dev/laminas-test/):
+### Base de Datos
+- **Host**: localhost:3306
+- **Usuario**: `ceda_user`
+- **Contraseña**: `ceda_password`
+- **Base de datos**: `ceda`
 
-  ```bash
-  $ composer require --dev laminas/laminas-test
-  ```
+### phpMyAdmin
+- **Usuario**: `root`
+- **Contraseña**: `root_password`
 
-Once testing support is present, you can run the tests using:
+### Usuario del Sistema (crear si no existe)
+```sql
+-- Ejecutar en phpMyAdmin
+INSERT INTO usuario (username, password, email, nombre, apellido, activo, fecha_creacion) 
+VALUES (
+    'admin', 
+    '$2y$10$BYer6/LTbTHNFGGlxjNhMOsnNYQ7OZMlDsz8LnZLc0fJszKtMhvP.',  -- password: admin123
+    'admin@ceda.com',
+    'Administrador',
+    'Sistema',
+    1,
+    NOW()
+);
+```
+
+**Credenciales de acceso:**
+- **Usuario**: `admin`
+- **Contraseña**: `admin123`
+
+## 🛠️ Comandos de Mantenimiento
+
+El proyecto incluye un script de mantenimiento para facilitar las tareas comunes:
 
 ```bash
-$ ./vendor/bin/phpunit
+# Ver todas las opciones disponibles
+./maintenance.sh help
+
+# Comandos más utilizados
+./maintenance.sh start      # Iniciar contenedores
+./maintenance.sh stop       # Detener contenedores
+./maintenance.sh restart    # Reiniciar contenedores
+./maintenance.sh logs       # Ver logs en tiempo real
+./maintenance.sh shell      # Acceder al contenedor web
+./maintenance.sh status     # Ver estado de contenedores
+./maintenance.sh db-backup  # Crear backup de BD
 ```
 
-If you need to make local modifications for the PHPUnit test setup, copy
-`phpunit.xml.dist` to `phpunit.xml` and edit the new file; the latter has
-precedence over the former when running tests, and is ignored by version
-control. (If you want to make the modifications permanent, edit the
-`phpunit.xml.dist` file.)
+## 🔧 Desarrollo
 
-## Using Vagrant
+### Estructura de Módulos
 
-This skeleton includes a `Vagrantfile` based on ubuntu 18.04 (bento box)
-with configured Apache2 and PHP 7.3. Start it up using:
+Cada módulo sigue el patrón MVC de Laminas:
 
+```
+module/NombreModulo/
+├── config/module.config.php  # Configuración del módulo
+├── src/
+│   ├── Controller/           # Controladores
+│   ├── Entity/              # Entidades
+│   ├── Form/                # Formularios
+│   ├── Service/             # Servicios
+│   └── Module.php           # Clase principal
+└── view/                    # Vistas/Templates
+```
+
+### Agregar un Nuevo Módulo
+
+1. **Crear estructura del módulo**:
 ```bash
-$ vagrant up
+mkdir -p module/NuevoModulo/{config,src/{Controller,Entity,Form,Service},view}
 ```
 
-Once built, you can also run composer within the box. For example, the following
-will install dependencies:
+2. **Crear clase Module**:
+```php
+<?php
+namespace NuevoModulo;
 
-```bash
-$ vagrant ssh -c 'composer install'
-```
-
-While this will update them:
-
-```bash
-$ vagrant ssh -c 'composer update'
-```
-
-While running, Vagrant maps your host port 8080 to port 80 on the virtual
-machine; you can visit the site at http://localhost:8080/
-
-> ### Vagrant and VirtualBox
->
-> The vagrant image is based on bento/ubuntu-18.04. If you are using VirtualBox as
-> a provider, you will need:
->
-> - Vagrant 2.2.6 or later
-> - VirtualBox 6.0.14 or later
-
-For vagrant documentation, please refer to [vagrantup.com](https://www.vagrantup.com/)
-
-## Using docker-compose
-
-This skeleton provides a `docker-compose.yml` for use with
-[docker-compose](https://docs.docker.com/compose/); it
-uses the provided `Dockerfile` to build a docker image 
-for the `laminas` container created with `docker-compose`.
-
-Build and start the image and container using:
-
-```bash
-$ docker-compose up -d --build
-```
-
-At this point, you can visit http://localhost:8080 to see the site running.
-
-You can also run commands such as `composer` in the container.  The container 
-environment is named "laminas" so you will pass that value to 
-`docker-compose run`:
-
-```bash
-$ docker-compose run laminas composer install
-```
-
-Some composer packages optionally use additional PHP extensions.  
-The Dockerfile contains several commented-out commands 
-which enable some of the more popular php extensions. 
-For example, to install `pdo-pgsql` support for `laminas/laminas-db`
-uncomment the lines:
-
-```sh
-# RUN apt-get install --yes libpq-dev \
-#     && docker-php-ext-install pdo_pgsql
-```
-
-then re-run the `docker-compose up -d --build` line as above.
-
-> You may also want to combine the various `apt-get` and `docker-php-ext-*`
-> statements later to reduce the number of layers created by your image.
-
-## Web server setup
-
-### Apache setup
-
-To setup apache, setup a virtual host to point to the public/ directory of the
-project and you should be ready to go! It should look something like below:
-
-```apache
-<VirtualHost *:80>
-    ServerName laminasapp.localhost
-    DocumentRoot /path/to/laminasapp/public
-    <Directory /path/to/laminasapp/public>
-        DirectoryIndex index.php
-        AllowOverride All
-        Order allow,deny
-        Allow from all
-        <IfModule mod_authz_core.c>
-        Require all granted
-        </IfModule>
-    </Directory>
-</VirtualHost>
-```
-
-### Nginx setup
-
-To setup nginx, open your `/path/to/nginx/nginx.conf` and add an
-[include directive](http://nginx.org/en/docs/ngx_core_module.html#include) below
-into `http` block if it does not already exist:
-
-```nginx
-http {
-    # ...
-    include sites-enabled/*.conf;
-}
-```
-
-
-Create a virtual host configuration file for your project under `/path/to/nginx/sites-enabled/laminasapp.localhost.conf`
-it should look something like below:
-
-```nginx
-server {
-    listen       80;
-    server_name  laminasapp.localhost;
-    root         /path/to/laminasapp/public;
-
-    location / {
-        index index.php;
-        try_files $uri $uri/ @php;
-    }
-
-    location @php {
-        # Pass the PHP requests to FastCGI server (php-fpm) on 127.0.0.1:9000
-        fastcgi_pass   127.0.0.1:9000;
-        fastcgi_param  SCRIPT_FILENAME /path/to/laminasapp/public/index.php;
-        include fastcgi_params;
+class Module
+{
+    public function getConfig()
+    {
+        return include __DIR__ . '/config/module.config.php';
     }
 }
 ```
 
-Restart the nginx, now you should be ready to go!
-
-## QA Tools
-
-The skeleton does not come with any QA tooling by default, but does ship with
-configuration for each of:
-
-- [phpcs](https://github.com/squizlabs/php_codesniffer)
-- [phpunit](https://phpunit.de)
-
-Additionally, it comes with some basic tests for the shipped
-`Application\Controller\IndexController`.
-
-If you want to add these QA tools, execute the following:
-
-```bash
-$ composer require --dev phpunit/phpunit squizlabs/php_codesniffer laminas/laminas-test
+3. **Registrar en `config/modules.config.php`**:
+```php
+return [
+    'Laminas\Router',
+    'Laminas\Validator',
+    // ... otros módulos
+    'NuevoModulo',  // ← Agregar aquí
+];
 ```
 
-We provide aliases for each of these tools in the Composer configuration:
+### Crear un Controlador
+
+```php
+<?php
+namespace NuevoModulo\Controller;
+
+use Laminas\Mvc\Controller\AbstractActionController;
+use Laminas\View\Model\ViewModel;
+
+class IndexController extends AbstractActionController
+{
+    public function indexAction()
+    {
+        return new ViewModel([
+            'message' => 'Hola desde el nuevo módulo'
+        ]);
+    }
+}
+```
+
+### Trabajar con Base de Datos
+
+El proyecto usa **Laminas DB** con el patrón **TableGateway**:
+
+```php
+// Ejemplo de acceso a datos
+use Laminas\Db\TableGateway\TableGateway;
+
+class UsuarioTable
+{
+    protected $tableGateway;
+
+    public function __construct(TableGateway $tableGateway)
+    {
+        $this->tableGateway = $tableGateway;
+    }
+
+    public function fetchAll()
+    {
+        return $this->tableGateway->select();
+    }
+
+    public function getUsuario($id)
+    {
+        return $this->tableGateway->select(['id' => $id])->current();
+    }
+}
+```
+
+## 🐛 Debugging
+
+### Ver Logs
+```bash
+# Logs de Apache
+./maintenance.sh logs
+
+# Logs específicos del contenedor web
+docker-compose logs web
+
+# Logs de la base de datos
+docker-compose logs db
+```
+
+### Acceder al Contenedor
+```bash
+# Shell del contenedor web
+./maintenance.sh shell
+
+# Ejecutar comandos PHP
+./maintenance.sh php -v
+./maintenance.sh composer --version
+```
+
+### Problemas Comunes
+
+**🚫 Puerto ya en uso**
+```bash
+# Cambiar puertos en docker-compose.yml
+ports:
+  - "8081:80"  # En lugar de 8080:80
+```
+
+**🗄️ Error de conexión a BD**
+```bash
+# Verificar que la BD esté corriendo
+docker-compose ps
+./maintenance.sh status
+
+# Reiniciar servicios
+./maintenance.sh restart
+```
+
+**📁 Permisos de archivos**
+```bash
+# Corregir permisos
+sudo chown -R $USER:$USER data/
+chmod -R 755 data/
+```
+
+## 📊 Base de Datos
+
+### Tablas Principales
+
+- `usuario` - Usuarios del sistema
+- `perfil` - Roles/perfiles de usuario
+- `usuario_perfil` - Relación usuarios-perfiles
+- `modulo` - Módulos del sistema
+- `permiso` - Permisos específicos
+
+### Backup y Restore
 
 ```bash
-# Run CS checks:
-$ composer cs-check
-# Fix CS errors:
-$ composer cs-fix
-# Run PHPUnit tests:
-$ composer test
+# Crear backup
+./maintenance.sh db-backup
+
+# Restaurar backup
+./maintenance.sh db-restore backup_20231215_143022.sql
 ```
-=======
-# EPS_CEDA_202104782
-Proyecto de Ejercicio Profesional Supervisado (EPS), de Mejoras y Optimizaciones para el portal de la Comisión de Evaluación Docente de la Facultad de Arquitectura de la Universidad de San Carlos de Guatemala
->>>>>>> 3b218b5c7ac83d0323c02d5dd1a8062d61131d34
+
+## 🚀 Deployment
+
+### Producción
+
+1. **Configurar variables de entorno**:
+```bash
+cp config/autoload/database.local.php.dist config/autoload/database.local.php
+# Editar con credenciales de producción
+```
+
+2. **Optimizar para producción**:
+```bash
+composer install --no-dev --optimize-autoloader
+```
+
+3. **Configurar servidor web** (Apache/Nginx) apuntando a `/public`
+
+## 🤝 Contribución
+
+1. **Fork** el repositorio
+2. **Crear** una rama para tu feature (`git checkout -b feature/nueva-funcionalidad`)
+3. **Commit** tus cambios (`git commit -am 'Agregar nueva funcionalidad'`)
+4. **Push** a la rama (`git push origin feature/nueva-funcionalidad`)
+5. **Crear** un Pull Request
+
+## 📄 Licencia
+
+Este proyecto está bajo la licencia [MIT](LICENSE).
+
+## 👥 Equipo de Desarrollo
+
+- **Desarrollador Principal**: [Tu Nombre]
+- **Email**: [tu.email@empresa.com]
+
+## 📞 Soporte
+
+Para reportar bugs o solicitar features:
+
+- **Issues**: [GitHub Issues](https://github.com/tuusuario/ceda/issues)
+- **Wiki**: [Documentación](https://github.com/tuusuario/ceda/wiki)
+- **Email**: soporte@ceda.com
+
+---
+
+## 🔥 Quick Start
+
+```bash
+# 1. Clonar
+git clone https://github.com/tuusuario/ceda.git && cd ceda
+
+# 2. Levantar ambiente
+chmod +x init-dev.sh && ./init-dev.sh
+
+# 3. Acceder
+# Web: http://localhost:8080
+# Admin: http://localhost:8081
+# Usuario: admin / Contraseña: admin123
+```
+
+**¡Listo para desarrollar! 🎉**
