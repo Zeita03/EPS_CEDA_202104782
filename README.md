@@ -340,16 +340,8 @@ Este proyecto está bajo la licencia [MIT](LICENSE).
 
 ## 👥 Equipo de Desarrollo
 
-- **Desarrollador Principal**: [Tu Nombre]
-- **Email**: [tu.email@empresa.com]
-
-## 📞 Soporte
-
-Para reportar bugs o solicitar features:
-
-- **Issues**: [GitHub Issues](https://github.com/tuusuario/ceda/issues)
-- **Wiki**: [Documentación](https://github.com/tuusuario/ceda/wiki)
-- **Email**: soporte@ceda.com
+- **Desarrollador Principal**: Anthony Samuel Zea Herrera
+- **Email**: [3661462700115@ingenieria.usac.edu.gt]
 
 ---
 
@@ -367,5 +359,3 @@ chmod +x init-dev.sh && ./init-dev.sh
 # Admin: http://localhost:8081
 # Usuario: admin / Contraseña: admin123
 ```
-
-**¡Listo para desarrollar! 🎉**
