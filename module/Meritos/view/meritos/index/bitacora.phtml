@@ -1,0 +1,59 @@
+<div class="container-fluid">
+
+    <!-- Page Heading -->
+    <h1 class="h3 mb-2 text-gray-800">Bitacora del sistema</h1>
+
+    <div class="modal fade" id="modalPdf" tabindex="-1" aria-labelledby="modalPdf" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">Ver constancia</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeModal()">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <iframe id="iframePDF" frameborder="0" scrolling="no" width="100%" height="500px"></iframe>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeModal()">Cerrar</button>
+
+                    </div>
+                </div>
+            </div>
+    </div>
+
+    <!-- DataTales Example -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Lista de acciones en el sistema</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <!-- <table class="table table-bordered dtable" id="dataTable" width="100%" cellspacing="0"> -->
+                <table class="table table-striped" id="tableLogs" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Id log</th>
+                            <th>Fecha de acción</th>
+                            <th>Usuario que realizo la acción</th>
+                            <th>Descripción de la acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($this->logs as $tmp): ?>
+                            <tr>
+                                <td><?= $tmp["id_bitacora"] ?></td>
+                                <td><?= $tmp["created_at"] ?></td>
+                                <td><?= $tmp["email"] ?></td>
+                                <td><?= $tmp["accion"] ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>

@@ -1,0 +1,373 @@
+<div id="contador"></div>
+
+<!-- Creacion de solicitud -->
+<?php if (!$this->dataedit): ?>
+
+<div class="row">
+    <div class="">
+
+        <div class="row">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-2 shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-principal text-uppercase mb-1">
+                                    Puntos Solicitud
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="label_pts"> 0 </div>
+                            </div>
+                            <div class="col-auto">
+                                <!-- <i class="fas fa-clipboard-list fa-2x text-gray-300"></i> -->
+                                <i class="fa-solid fa-book fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card flex-fill">
+
+            <div class="card-header">
+                <h5 class="card-title mb-0"> 4. Investigaciones y/o publicaciones realizadas </h5>
+            </div>
+
+            <div class="card-body">
+
+                <form class="user needs-validation" method="POST" enctype="multipart/form-data" novalidate>
+                    
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label for="">Categoria del documento *</label>
+                            <select class="form-select form-control" aria-label="Default select example" id="categoria" onchange="validateDocument(this)"  name="categoria" required>
+                                <option selected disabled value="">Seleccione la categoria</option>
+                                <option value="4.1">Investigaciones y/o publicaciones realizadas</option>
+                                <option value="4.2">Documentos de apoyo a la docencia</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Por favor seleccione la categoria del documento
+                            </div>
+                        </div>
+
+                        <div class="col-sm-6">
+                        <label for="">Tipo de documento *</label>
+                            <select class="form-select form-control" aria-label="Default select example" id="subcategoria" name="subcategoria" onchange="validateSubCategoriaDocument(this)"  required>
+                                <option selected disabled value="">Seleccione el tipo de documento</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Por favor seleccione el tipo de documento
+                            </div>
+                            
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label class="form-label" for="institucion">Titulo de la investigación o publicación *</label>
+                            <input type="text" class="form-control form-control-user" id="titulo" name="titulo_investigacion" maxLength="255" pattern="[A-Za-z0-9äÄëËïÏöÖüÜáéíóúáéíóúÁÉÍÓÚÂÊÎÔÛâêîôûàèìòùÀÈÌÒÙñÑ._\-,; ]+"
+                                placeholder="Título de la investigación o publicación" required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el titulo de la investigación/publicación
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label" for="institucion">Institución *</label>
+                            <input type="text" class="form-control form-control-user" id="institution" name="institucion" maxLength="255" pattern="[A-Za-z0-9äÄëËïÏöÖüÜáéíóúáéíóúÁÉÍÓÚÂÊÎÔÛâêîôûàèìòùÀÈÌÒÙñÑ._\-,; ]+"
+                                placeholder="Institución" required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el nombre de la institución
+                            </div>
+                            
+                        </div>
+                    </div>
+                    
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label for="fecha_obtencion">Periodo de Realización Del: Al: *</label>
+                            <input type="text" class="form-control form-control-user" id="fecha_realizacion" name="periodo" maxLength="50" pattern="[A-Za-z0-9äÄëËïÏöÖüÜáéíóúáéíóúÁÉÍÓÚÂÊÎÔÛâêîôûàèìòùÀÈÌÒÙñÑ._\-,; ]+"
+                                placeholder="Escriba el periodo en el que se realizó" required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el periodo de obtención
+                            </div>
+                            
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="">Constancia de la investigación o publicación *</label>    
+                            <input type="file" class="form-control" name="subir_archivo" onchange="validarExtension(this)"
+                                id="archivo" required>
+                            <div class="invalid-feedback">
+                                Por favor suba la contancia de su investigación/publicación
+                            </div>
+                            
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <input type="hidden" class="form-control" value="1"
+                                id="id_estado" name="id_estado" required>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <input type="hidden" class="form-control" value="<?= $this->data["usuario"]; ?>"
+                                id="id_usuario" name="id_usuario">
+                        </div>
+
+                        <div class="col-sm-6">
+                            <input type="hidden" class="form-control" value="0" id="puntos" name="puntos">
+                        </div>
+
+                    </div>
+
+                    <p id="nota" class="nota">
+                    NOTA: Tanto las hojas de trabajo como los documentos o presentaciones de apoyo a la docencia presentados deberán cumplir con los requisitos mínimos siguientes:
+                    Que tengan total utilidad directa al curso, estructura y aporte del profesor, que sean realizados durante el año que se evalúa. 
+                    Los documentos y presentaciones de años anteriores al presente período, no tendrán ninguna validez. Todo documento debe indicar el nombre del autor y fecha de creación. 
+                    </p>
+
+                    <div class="mt-3">
+                        <input type="submit" class="btn btn-primary" value="Solicitar" /> 
+                    </div>
+                    
+                </form>
+
+
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<?php endif; ?>
+<!-- Fin creacion solicitud -->
+
+
+<!-- Edicion  -->
+<?php if ($this->dataedit): ?>
+
+<div class="row">
+    <div class="">
+
+        <div class="row">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-2 shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-principal text-uppercase mb-1">
+                                    Puntos Solicitud
+                                </div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="label_pts"> 0 </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card flex-fill">
+
+            <div class="card-header">
+                <h5 class="card-title mb-0"> 4. Edición de Investigaciones y/o publicaciones realizadas </h5>
+            </div>
+
+            <div class="card-body">
+
+                <form class="user needs-validation" method="POST" enctype="multipart/form-data" novalidate>
+                    
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label for="">Categoria del documento *</label>
+                            <select class="form-select form-control" aria-label="Default select example" id="categoria" onchange="validateDocument(this)"  name="categoria" required>
+                                <option selected disabled value="">Seleccione la categoria</option>
+                                <option value="4.1">Investigaciones y/o publicaciones realizadas</option>
+                                <option value="4.2">Documentos de apoyo a la docencia</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Por favor seleccione la categoria del documento
+                            </div>
+                        </div>
+
+                        <div class="col-sm-6">
+                        <label for="">Tipo de documento *</label>
+                            <select class="form-select form-control" aria-label="Default select example" id="subcategoria" name="subcategoria" onchange="validateSubCategoriaDocument(this)"  required>
+                                <option selected disabled value="">Seleccione el tipo de documento</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Por favor seleccione el tipo de documento
+                            </div>
+                            
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label class="form-label" for="institucion">Titulo de la investigación o publicación *</label>
+                            <input type="text" class="form-control form-control-user" id="titulo" name="titulo_investigacion" value="<?= $this->dataedit[0]["titulo_investigacion"]; ?>"
+                                placeholder="Título de la investigación o publicación" maxLength="255" pattern="[A-Za-z0-9äÄëËïÏöÖüÜáéíóúáéíóúÁÉÍÓÚÂÊÎÔÛâêîôûàèìòùÀÈÌÒÙñÑ._\-,; ]+" required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el titulo de la investigación/publicación
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label" for="institucion">Institución *</label>
+                            <input type="text" class="form-control form-control-user" id="institution" name="institucion" value="<?= $this->dataedit[0]["institucion"]; ?>"
+                                placeholder="Institución" maxLength="255" pattern="[A-Za-z0-9äÄëËïÏöÖüÜáéíóúáéíóúÁÉÍÓÚÂÊÎÔÛâêîôûàèìòùÀÈÌÒÙñÑ._\-,; ]+" required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el nombre de la institución
+                            </div>
+                            
+                        </div>
+                    </div>
+                    
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label for="fecha_obtencion">Periodo de Realización Del: Al: *</label>
+                            <input type="text" class="form-control form-control-user" id="fecha_realizacion" name="periodo" value="<?= $this->dataedit[0]["periodo"]; ?>"
+                                placeholder="Escriba el periodo en el que se realizó" maxLength="50" pattern="[A-Za-z0-9äÄëËïÏöÖüÜáéíóúáéíóúÁÉÍÓÚÂÊÎÔÛâêîôûàèìòùÀÈÌÒÙñÑ._\-,; ]+" required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el periodo de obtención
+                            </div>
+                            
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="">Constancia de la investigación o publicación *</label>
+                            <div id="viewFile">
+                                <a class="btn btn-primary" href="<?= $this->url("meritosHome/meritos", ["action" => "displayfile" , "val1"=> $this->dataedit[0]['url_constancia']]) ?>" target="_blank">
+                                    Constancia
+                                </a>
+
+                                <a class="btn" onclick="changeFile();">
+                                    <i class="fa-solid fa-arrow-rotate-right"></i>
+                                </a>
+                                
+                            </div>
+                            <input type="file" class="form-control" name="subir_archivo" style="display:none;"  onchange="validarExtension(this)"
+                                id="archivo">
+                            <div class="invalid-feedback">
+                                Por favor suba la contancia de su investigación/publicación
+                            </div>
+                            
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <input type="hidden" class="form-control" value="1"
+                                id="id_estado" name="id_estado" required>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <input type="hidden" class="form-control" value="<?= $this->data["usuario"]; ?>"
+                                id="id_usuario" name="id_usuario">
+                        </div>
+
+                        <div class="col-sm-6">
+                            <input type="hidden" class="form-control" value="0" id="puntos" name="puntos">
+                        </div>
+
+                        <input name="_method" type="hidden" value="put" />
+
+                    </div>
+
+                    <p id="nota" class="nota">
+                        NOTA: Tanto las hojas de trabajo como los documentos o presentaciones de apoyo a la docencia presentados deberán cumplir con los requisitos mínimos siguientes:
+                        Que tengan total utilidad directa al curso, estructura y aporte del profesor, que sean realizados durante el año que se evalúa. 
+                        Los documentos y presentaciones de años anteriores al presente período, no tendrán ninguna validez.
+                    </p>
+
+                    <div class="mt-3">
+                        <input type="submit" class="btn btn-primary" value="Solicitar" /> 
+                    </div>
+                    
+                </form>
+
+
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+
+<script>
+
+let listaDocs = [
+    {
+    type: "4.1",
+    value: "4.1.1",
+    name: "Libro o tesis",
+    puntos: 6,
+  },
+  {
+    type: "4.1",
+    value: "4.1.2",
+    name: "Por cada ensayo, articulo de revista o folleto",
+    puntos: 3,
+  },
+  {
+    type: "4.2",
+    value: "4.2.1",
+    name: "Hojas de trabajo o laboratorios (10 o más)",
+    puntos: 2,
+  },
+  {
+    type: "4.2",
+    value: "4.2.1",
+    name: "Por cada documento (6 o más hojas)",
+    puntos: 2,
+  },
+  {
+    type: "4.2",
+    value: "4.2.3",
+    name: "Por cada presentación (digital) de Conferencias, Charlas y/o cursos de implementación y/o actualización académica",
+    puntos: 2,
+  }
+];
+
+
+function cargarInfo(data) {
+    //console.log('Aqui');
+    //console.log(data)
+    const value = data.categoria;
+    document.getElementById("categoria").value = value;;
+    let categorias = listaDocs.filter((e) => e.type == value);
+    const select = document.getElementById("subcategoria");
+   
+    for (const option of categorias) {
+        let newOption = document.createElement("option");
+        newOption.value = option.value;
+        newOption.text = option.name;
+        select.add(newOption);
+    }
+    // select.selectedIndex = 0;
+    select.value = data.subcategoria;
+    let valueObject = listaDocs.find((e) => e.value == data.subcategoria);
+    document.querySelector("#label_pts").innerHTML = valueObject.puntos;
+    document.querySelector("#puntos").value = valueObject.puntos;
+    
+
+}
+
+cargarInfo(<?= json_encode($this->dataedit[0]) ?>);
+
+</script>
+
+<?php endif; ?>
+<!-- fin edicion -->
+
+<script>
+    if('<?= $this->fecha ?>'){
+        contadorTiempoDisponible('<?= $this->fecha ?>');
+    }
+</script>

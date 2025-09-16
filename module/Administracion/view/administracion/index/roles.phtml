@@ -1,0 +1,76 @@
+<div class="container-fluid">
+    <div class="col-12">
+        <center><h2>Gestión de Roles</h2></center>
+    </div>
+
+    <?php if ($this->acceso[0] == 1): ?>
+        <h3 class="">
+            <button class="btn btn-success" id="btn-agregar">Agregar <i class="fas fa-plus"></i></button>
+        </h3>
+        <div id="dialog-add" title="Agregar / Actualizar">
+            <form class="form" method="POST" id="form-add">
+
+                <label class="" for="rol">*Rol</label>
+                <input type="text" name="rol" class="form-control input-dialog-key" placeholder="ID del Rol" required autofocus="" value="" />
+
+                <label class="" for="nombre">*Nombre</label>
+                <input type="text" name="nombre" class="form-control" placeholder="Nombre" required autofocus="" value="" />
+
+                <label class="" for="descripcion">*Descripción</label>
+                <input type="text" name="descripcion" class="form-control" placeholder="Descripción" required autofocus="" value="" />
+
+                <br />
+                <div class="form-group">
+                    <button class="btn-success btn pull-left" id="btn-agregar-aceptar" type="submit">Aceptar</button>
+                    <button class="btn-danger btn pull-right" id="btn-agregar-cancel" type="button">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    <?php endif; ?>
+
+    
+    
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <!-- <h6 class="m-0 font-weight-bold text-primary">Solicitudes de Meritos curriculares</h6> -->
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped dtable">
+                    <thead>
+                        <tr>
+                            <th>ID del Rol</th>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($this->data as $tmp): ?>
+                            <tr>
+                                <td><?= $tmp["rol"] ?></td>
+                                <td><?= $tmp["nombre"] ?></td>
+                                <td><?= $tmp["descripcion"] ?></td>
+                                <td>
+                                    <?php if ($this->acceso[0] == 1): ?>
+                                        <!-- <input type="submit" class="btn btn-primary btn-sm1" value="Editar" onclick='cargarDialogActualizar(<?= json_encode($tmp) ?>)' /> -->
+                                        <button type="submit" class="btn btn-primary btn-sm1" onclick='cargarDialogActualizar(<?= json_encode($tmp) ?>)' > <i class="fas fa-edit"></i>  </button>
+                                    <?php endif; ?>
+                                    <a class="btn btn-secondary btn-sm1" href="<?= $this->url('administracionHome/administracion', ["action" => 'rolpermisos', "val1" => $tmp["rol"]]) ?>">
+                                        <i class="fas fa-pencil-alt"></i>
+                                    </a>
+                                    <?php if ($this->acceso[1] == 1): ?>
+                                        <!-- <input type="button" class="btn btn-danger btn-sm1" value="Eliminar" onclick="dialogEliminar({id: '<?= $tmp["rol"] ?>'})" /> -->
+                                        <button type="button" class="btn btn-danger btn-sm1" value="Eliminar" onclick="dialogEliminar({id: '<?= $tmp["rol"] ?>'})" > <i class="fas fa-trash"></i> </button>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>                
+            </div>
+        </div>
+    </div>
+
+</div>
+

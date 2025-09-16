@@ -1,0 +1,161 @@
+<div class="container-fluid">
+
+    <!-- Page Heading -->
+    <h1 class="h3 mb-2 text-gray-800">Solicitudes</h1>
+
+    <div class="modal fade" id="modalPdf" tabindex="-1" aria-labelledby="modalPdf" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="exampleModalLabel">Ver constancia</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeModal()">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <iframe id="iframePDF" frameborder="0" scrolling="no" width="100%" height="500px"></iframe>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeModal()">Cerrar</button>
+
+                    </div>
+                </div>
+            </div>
+    </div>
+
+    <!-- DataTales Example -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Solicitudes de Meritos curriculares</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <!-- <table class="table table-bordered dtable" id="dataTable" width="100%" cellspacing="0"> -->
+                <table class="table table-striped dtable" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Fecha de solicitud</th>
+                            <th>Nombre docente</th>
+                            <th>Grado academico</th>
+                            <th>Tipo de solicitud</th>
+                            <th>Constancia</th>
+                            <th>Estado solicitud</th>
+                            <th>Ver detalles de la solicitud</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($this->premios as $tmp): ?>
+                            <tr>
+                                <td><?= $tmp["updated_at"] ?></td>
+                                <td><?= $tmp["nombre"] ?></td>
+                                <td><?= $tmp["grado_academico"] ?></td>
+                                <td>Premios, menciones honoríficas y reconocimientos a nivel profesional</td>
+                                <td> 
+                                    <a class="btn btn-primary" href="<?= $this->url("meritosHome/meritos", ["action" => "displayfile" , "val1"=> $tmp['url_file']]) ?>" target="_blank">
+                                        Constancia
+                                    </a>
+                                </td>
+                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
+                                <td>
+                                    <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
+                                        <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admPremios" , "val1"=> "edit", "val2"=>$tmp["id_premio"]]) ?>">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        <?php foreach ($this->cargos as $tmp): ?>
+                            <tr>
+                                <td><?= $tmp["updated_at"] ?></td>
+                                <td><?= $tmp["nombre"] ?></td>
+                                <td><?= $tmp["grado_academico"] ?></td>
+                                <td>Cargos desempeñados</td>
+                                <td> 
+                                    <a class="btn btn-primary" href="<?= $this->url("meritosHome/meritos", ["action" => "displayfile" , "val1"=> $tmp['url_constancia']]) ?>" target="_blank">
+                                        Constancia
+                                    </a>
+                                </td>
+                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
+                                <td>
+                                    <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
+                                        <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admCargos" , "val1"=> "edit", "val2"=>$tmp["id_cargo"]]) ?>">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        <?php foreach ($this->formacion as $tmp): ?>
+                            <tr>
+                                <td><?= $tmp["updated_at"] ?></td>
+                                <td><?= $tmp["nombre"] ?></td>
+                                <td><?= $tmp["grado_academico"] ?></td>
+                                <td>Formación profesional</td>
+                                <td> 
+                                    <a class="btn btn-primary" href="<?= $this->url("meritosHome/meritos", ["action" => "displayfile" , "val1"=> $tmp['url_constancia']]) ?>" target="_blank">
+                                        Constancia
+                                    </a>
+                                </td>
+                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
+                                <td>
+                                    <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
+                                        <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admFormacionAcademica" , "val1"=> "edit", "val2"=>$tmp["id_formacion_academica"]]) ?>">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+
+                        <?php foreach ($this->capacitacion as $tmp): ?>
+                            <tr>
+                                <td><?= $tmp["updated_at"] ?></td>
+                                <td><?= $tmp["nombre"] ?></td>
+                                <td><?= $tmp["grado_academico"] ?></td>
+                                <td>Capacitación profesional: Relacionada con la docencia</td>
+                                <td> 
+                                    <a class="btn btn-primary" href="<?= $this->url("meritosHome/meritos", ["action" => "displayfile" , "val1"=> $tmp['url_constancia']]) ?>" target="_blank">
+                                        Constancia
+                                    </a>
+                                </td>
+                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
+                                <td>
+                                     <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
+                                        <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admCapacitacionProfesional" , "val1"=> "edit", "val2"=>$tmp["id_capacitacion"]]) ?>">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                    
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        <?php foreach ($this->investigaciones as $tmp): ?>
+                            <tr>
+                                <td><?= $tmp["updated_at"] ?></td>
+                                <td><?= $tmp["nombre"] ?></td>
+                                <td><?= $tmp["grado_academico"] ?></td>
+                                <td>Investigaciones y/o publicaciones realizadas</td>
+                                <td> 
+                                    <a class="btn btn-primary" href="<?= $this->url("meritosHome/meritos", ["action" => "displayfile" , "val1"=> $tmp['url_constancia']]) ?>" target="_blank">
+                                        Constancia
+                                    </a>
+                                </td>
+                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
+                                <td>
+                                    <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
+                                        <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admInvestigaciones" , "val1"=> "edit", "val2"=>$tmp["id_investigacion"]]) ?>">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>

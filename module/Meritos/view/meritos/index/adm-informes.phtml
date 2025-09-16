@@ -1,0 +1,45 @@
+<div class="container-fluid">
+    <div class="col-12">
+        <center><h2>Informes de actividades</h2></center>
+        
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <!-- <h6 class="m-0 font-weight-bold text-primary">Solicitudes de Meritos curriculares</h6> -->
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped dtable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha de creación</th>
+                            <th>Nombre usuario</th>
+                            <th>Archivo informe</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($this->informes as $tmp): ?>
+                            <tr>
+                                <td><?= $tmp["id_informe"] ?></td>
+                                <td><?= $tmp["created_at"] ?></td>
+                                <td><?= $tmp["nombre"] ?></td>
+                                <td>
+                                    <a class="btn btn-primary" href="<?= $this->url("meritosHome/meritos", ["action" => "displayfile" , "val1"=> $tmp['url_informe']]) ?>" target="_blank">
+                                        Informe
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+
+

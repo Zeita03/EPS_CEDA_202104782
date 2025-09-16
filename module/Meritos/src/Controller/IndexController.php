@@ -1,0 +1,1650 @@
+<?php
+
+/**
+ * @see       https://github.com/laminas/laminas-mvc-skeleton for the canonical source repository
+ * @copyright https://github.com/laminas/laminas-mvc-skeleton/blob/master/COPYRIGHT.md
+ * @license   https://github.com/laminas/laminas-mvc-skeleton/blob/master/LICENSE.md New BSD License
+ */
+
+namespace Meritos\Controller;
+
+use Laminas\Mvc\Controller\AbstractActionController;
+use Laminas\View\Model\ViewModel;
+use \Datetime;
+use \DateTimeZone;
+
+class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractActionController {
+
+    private $authService;
+    private $adapter;
+    private $lastGeneratedValue;
+    private $acceso;
+
+    function __construct($authService, $adapter) {
+        $this->authService = $authService;
+        $this->adapter = $adapter;
+    }
+
+    /**
+     * Este método se ejecuta antes que las acciones, en este lugar se valida
+     * la sessión del usuario y los permisos que tiene sobre el action a ejecutar
+     */
+    public function onDispatch(\Zend\Mvc\MvcEvent $e) {
+        //verificar que el usuario tenga permisos de acceso al sitio, sino redireccionar al login..
+        if ($this->authService->hasIdentity() && $this->authService->getIdentity() instanceof \Auth\Model\AuthEntity && $this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            //inyectando la información del usuario autenticado
+            $this->layout()->setTemplate('layout/layoutAdmon');
+            $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+        } else {
+            return $this->redirect()->toRoute('home');
+        }
+
+        //extraer la información de la ruta de acceso del usuario
+        $routeMatch = $e->getRouteMatch();
+        $nombreControlador = $routeMatch->getParam('controller');
+        $nombreAccion = $routeMatch->getParam('action');
+        //verificar si tiene el permiso para ingresar a esta acción...
+        $authManager = new \Auth\Service\AuthManager($this->authService, $this->adapter);
+        
+
+        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
+        $settings = $configuracionTable->getConfiguracion();
+        
+        if($nombreAccion == 'premios' || $nombreAccion == 'formacionAcademica' || $nombreAccion == 'cargos' || $nombreAccion == 'investigaciones' || $nombreAccion == 'capacitacionProfesional'){
+            
+            $fechaInicial = $settings[0]['startDate'] . " ". $settings[0]['startTime'] .":00";
+            $fechaFinal = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
+
+            date_default_timezone_set('America/Guatemala');
+
+            $datetime1 = new DateTime($fechaInicial);
+            $datetime2 = new DateTime($fechaFinal);
+            $fechahoy = new DateTime("now");
+
+            if( ($fechahoy > $datetime2) || ($fechahoy < $datetime1)){
+                return $this->redirect()->toRoute("administracionHome/administracion", ["action" => "periodoInactivo"]);
+            }
+
+        }
+
+        if ($nombreAccion != 'accesoDenegado' && $nombreAccion != 'periodoInactivo' && $nombreAccion != 'premios' && $nombreAccion !='formacionAcademica' && $nombreAccion !='cargos' && $nombreAccion !='investigaciones' && $nombreAccion !='capacitacionProfesional' && $nombreAccion != 'solicitudes' && $nombreAccion != 'misSolicitudes' &&  $nombreAccion != 'configuracion' && $nombreAccion != 'reportes' && $nombreAccion != 'admSolicitudes' && $nombreAccion !='displayfile' && $authManager->verificarPermiso($nombreControlador, $nombreAccion) != true) {
+            return $this->redirect()->toRoute("administracionHome/administracion", ["action" => "accesoDenegado"]);
+        }
+
+        if(!$authManager->verificarPermiso($nombreControlador, $nombreAccion)){
+            return $this->redirect()->toRoute("administracionHome/administracion", ["action" => "accesoDenegado"]);
+        }
+
+        $this->acceso = $authManager->acceso;
+        
+
+        //agregar mensajes pendientes...
+        $textoMensaje = $this->getMensajePendiente();
+        if (!empty($textoMensaje)) {
+            if ($textoMensaje[0] == 1) {
+                $this->flashMessenger()->addSuccessMessage($textoMensaje[1]);
+            } else {
+                $this->flashMessenger()->addErrorMessage($textoMensaje[1]);
+            }
+        }
+
+        //extraer permisos y construir la variable de menu...
+        $usuarioTable = new \ORM\Model\Entity\UsuarioTable($this->adapter);
+        $menuData = $usuarioTable->getMenuUsuario($this->authService->getIdentity()->getId());
+        $this->layout()->setVariable('menuData', $menuData);
+
+        return parent::onDispatch($e);
+    }
+
+
+
+    public function displayfileAction(){
+        $name_file = $this->params()->fromRoute('val1',0);
+        $name = $name_file . ".pdf";
+        //$pdf_file = "./archivos/" . $name;
+
+
+        $file = getcwd() . "/archivos/" . $name;
+
+        //$content = file_get_contents($pdf_file);
+        header('Cache-Control: public' );
+        header('Content-Description: File Transfer' );
+        header('Content-Disposition: inline; filename="' . $name . '"');
+        header('Content-type: application/pdf' );
+        header('Content-Transfer-Encoding: binary' );
+        header('Content-Length: ' . filesize($file));
+        header('Accept-Ranges: bytes');
+        @readfile($file);
+        die;
+        
+        
+        /*echo $content;
+
+
+        $file = getcwd() . '/archivos_privado/mi_archivo.pdf';
+        $filename = 'mi_archivo.pdf';
+        header('Content-type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Content-Transfer-Encoding: binary');
+        header('Content-Length: ' . filesize($file));
+        header('Accept-Ranges: bytes');
+        @readfile($file);
+        die;*/
+
+    }
+
+
+    public function sendEmail($email,$nameUser, $estado){
+        $mailManager = new \Utilidades\Service\MailManager();
+        /*$htmlMail = ("Estimado {$nameUser}, 
+                    <br><br>Le informamos que su solicitud de mérito academico ha sido {$estado}.
+                    <br><br>Cualquier inconveniente no dudes en contactarnos.
+                    <br><br>Atentamente,
+                    ");*/
+
+        $htmlMail = ('<!DOCTYPE html>
+        <html lang="en" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
+        <head>
+            <title></title>
+            <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+            <meta content="width=device-width,initial-scale=1" name="viewport" />
+            <link href="https://fonts.googleapis.com/css?family=Abril+Fatface" rel="stylesheet" type="text/css" />
+            <link href="https://fonts.googleapis.com/css?family=Alegreya" rel="stylesheet" type="text/css" />
+            <link href="https://fonts.googleapis.com/css?family=Arvo" rel="stylesheet" type="text/css" />
+            <link href="https://fonts.googleapis.com/css?family=Bitter" rel="stylesheet" type="text/css" />
+            <link href="https://fonts.googleapis.com/css?family=Cabin" rel="stylesheet" type="text/css" />
+            <link href="https://fonts.googleapis.com/css?family=Ubuntu" rel="stylesheet" type="text/css" />
+            <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" type="text/css" />
+            <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css" />
+            <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet" type="text/css" />
+            <link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet" type="text/css" />
+            <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet" type="text/css" /><!--<![endif]-->
+            <style>
+                * {
+                    box-sizing: border-box
+                }
+
+                body {
+                    margin: 0;
+                    padding: 0
+                }
+
+                a[x-apple-data-detectors] {
+                    color: inherit !important;
+                    text-decoration: inherit !important
+                }
+
+                #MessageViewBody a {
+                    color: inherit;
+                    text-decoration: none
+                }
+
+                p {
+                    line-height: inherit
+                }
+
+                .desktop_hide,
+                .desktop_hide table {
+                    mso-hide: all;
+                    display: none;
+                    max-height: 0;
+                    overflow: hidden
+                }
+
+                @media (max-width:520px) {
+                    .desktop_hide table.icons-inner {
+                        display: inline-block !important
+                    }
+
+                    .icons-inner {
+                        text-align: center
+                    }
+
+                    .icons-inner td {
+                        margin: 0 auto
+                    }
+
+                    .row-content {
+                        width: 100% !important
+                    }
+
+                    .mobile_hide {
+                        display: none
+                    }
+
+                    .stack .column {
+                        width: 100%;
+                        display: block
+                    }
+
+                    .mobile_hide {
+                        min-height: 0;
+                        max-height: 0;
+                        max-width: 0;
+                        overflow: hidden;
+                        font-size: 0
+                    }
+
+                    .desktop_hide,
+                    .desktop_hide table {
+                        display: table !important;
+                        max-height: none !important
+                    }
+
+                    .row-2 .column-1 .block-2.heading_block td.pad {
+                        padding: 0 20px 20px !important
+                    }
+                }
+            </style>
+        </head>
+
+        <body style="background-color:#fff;margin:0;padding:0;-webkit-text-size-adjust:none;text-size-adjust:none">
+            <table border="0" cellpadding="0" cellspacing="0" class="nl-container" role="presentation"
+                style="mso-table-lspace:0;mso-table-rspace:0;background-color:#fff" width="100%">
+                <tbody>
+                    <tr>
+                        <td>
+                            <table align="center" border="0" cellpadding="0" cellspacing="0" class="row row-1"
+                                role="presentation" style="mso-table-lspace:0;mso-table-rspace:0;background:transparent linear-gradient(180deg, #003470 0%, #041d3c 100%) 0% 0% no-repeat padding-box"
+                                width="100%">
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <table align="center" border="0" cellpadding="0" cellspacing="0"
+                                                class="row-content stack" role="presentation"
+                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:500px"
+                                                width="500">
+                                                <tbody>
+                                                    <tr>
+                                                        <td class="column column-1"
+                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:0;padding-bottom:5px;border-top:0;border-right:0;border-bottom:0;border-left:0"
+                                                            width="100%">
+                                                            <table border="0" cellpadding="0" cellspacing="0"
+                                                                class="image_block block-1" role="presentation"
+                                                                style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
+                                                                <tr>
+                                                                    <td class="pad"
+                                                                        style="padding-bottom:30px;padding-top:20px;width:100%;padding-right:0;padding-left:0">
+                                                                        <div align="center" class="alignment"
+                                                                            style="line-height:10px"><img
+                                                                                src="https://farusac.edu.gt/wp-content/uploads/2022/10/headerfarusaclogos.png"
+                                                                                style="display:block;height:auto;border:0;width:410px;max-width:100%"
+                                                                                width="410" /></div>
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <table align="center" border="0" cellpadding="0" cellspacing="0" class="row row-2"
+                                role="presentation" style="mso-table-lspace:0;mso-table-rspace:0;background-color:#f2f2f2"
+                                width="100%">
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <table align="center" border="0" cellpadding="0" cellspacing="0"
+                                                class="row-content stack" role="presentation"
+                                                style="mso-table-lspace:0;mso-table-rspace:0;background-color:#f2f2f2;border-radius:40px 0;color:#000;width:500px"
+                                                width="500">
+                                                <tbody>
+                                                    <tr>
+                                                        <td class="column column-1"
+                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:15px;padding-bottom:20px;border-top:0;border-right:0;border-bottom:0;border-left:0"
+                                                            width="100%">
+                                                            <table border="0" cellpadding="0" cellspacing="0"
+                                                                class="image_block block-1" role="presentation"
+                                                                style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
+                                    
+                                                            </table>
+                                                            <table border="0" cellpadding="0" cellspacing="0"
+                                                                class="heading_block block-2" role="presentation"
+                                                                style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
+                                                                <tr>
+                                                                    <td class="pad"
+                                                                        style="padding-bottom:20px;text-align:center;width:100%">
+                                                                        <h1
+                                                                            style="margin:0;color:#041d3c;direction:ltr;font-family:Nunito,Arial,Helvetica Neue,Helvetica,sans-serif;font-size:25px;font-weight:400;letter-spacing:normal;line-height:120%;text-align:center;margin-top:0;margin-bottom:0">
+                                                                            <span class="tinyMce-placeholder">Estado de la solicitud</span>
+                                                                        </h1>
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                            <table border="0" cellpadding="0" cellspacing="0"
+                                                                class="text_block block-3" role="presentation"
+                                                                style="mso-table-lspace:0;mso-table-rspace:0;word-break:break-word"
+                                                                width="100%">
+                                                                <tr>
+                                                                    <td class="pad"
+                                                                        style="padding-bottom:20px;padding-left:20px;padding-right:20px;padding-top:10px">
+                                                                        <div style="font-family:sans-serif">
+                                                                            <div class="txtTinyMce-wrapper"
+                                                                                style="font-size:12px;font-family:Nunito,Arial,Helvetica Neue,Helvetica,sans-serif;mso-line-height-alt:18px;color:#393d47;line-height:1.5">
+                                                                                <p style="margin:0;font-size:16px"><span
+                                                                                        style="font-size:16px;">Hola ' . $nameUser . ':</span></p>
+                                                                                <p
+                                                                                    style="margin:0;font-size:16px;mso-line-height-alt:18px">
+                                                                                     </p>
+                                                                                <p style="margin:0;font-size:16px">
+                                                                                    Le informamos que su solicitud de mérito academico ha sido '. $estado . '.
+                                                                                    
+                                                                                </p>
+
+                                                                                <p style="margin:0;font-size:16px">
+                                                                                    Cualquier inconveniente no dudes en contactarnos.
+                                                                                </p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                      
+                                                            <table border="0" cellpadding="0" cellspacing="0"
+                                                                class="text_block block-5" role="presentation"
+                                                                style="mso-table-lspace:0;mso-table-rspace:0;word-break:break-word"
+                                                                width="100%">
+                                                                <tr>
+                                                                    <td class="pad"
+                                                                        style="padding-bottom:20px;padding-left:20px;padding-right:20px;padding-top:10px">
+                                                                        <div style="font-family:sans-serif">
+                                                                            <div class="txtTinyMce-wrapper"
+                                                                                style="font-size:12px;font-family:Nunito,Arial,Helvetica Neue,Helvetica,sans-serif;mso-line-height-alt:14.399999999999999px;color:#393d47;line-height:1.2">
+                                                                                <p style="margin:0;font-size:16px"><span
+                                                                                        style="font-size:14px;">* Nota: este correo electrónico se envió desde una dirección de correo electrónico que no acepta correo entrante. No responda a este mensaje. </span></p>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <table align="center" border="0" cellpadding="0" cellspacing="0" class="row row-3"
+                                role="presentation" style="mso-table-lspace:0;mso-table-rspace:0;background:transparent linear-gradient(180deg, #003470 0%, #041d3c 100%) 0% 0% no-repeat padding-box"
+                                width="100%">
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <table align="center" border="0" cellpadding="0" cellspacing="0"
+                                                class="row-content stack" role="presentation"
+                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:500px"
+                                                width="500">
+                                                <tbody>
+                                                    <tr>
+                                                        <td class="column column-1"
+                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:5px;padding-bottom:5px;border-top:0;border-right:0;border-bottom:0;border-left:0"
+                                                            width="100%">
+                                                            <table border="0" cellpadding="15" cellspacing="0"
+                                                                class="text_block block-1" role="presentation"
+                                                                style="mso-table-lspace:0;mso-table-rspace:0;word-break:break-word"
+                                                                width="100%">
+                                                                <tr>
+                                                                    <td class="pad">
+                                                                        <div style="font-family:sans-serif">
+                                                                            <div class="txtTinyMce-wrapper"
+                                                                                style="font-size:12px;font-family:Nunito,Arial,Helvetica Neue,Helvetica,sans-serif;text-align:center;mso-line-height-alt:18px;color:#fff;line-height:1.5">
+                                                                                <span style="font-size:16px;"> </span></div>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <table align="center" border="0" cellpadding="0" cellspacing="0" class="row row-4"
+                                role="presentation" style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <table align="center" border="0" cellpadding="0" cellspacing="0"
+                                                class="row-content stack" role="presentation"
+                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:500px"
+                                                width="500">
+                                                <tbody>
+                                                    <tr>
+                                                        <td class="column column-1"
+                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:5px;padding-bottom:5px;border-top:0;border-right:0;border-bottom:0;border-left:0"
+                                                            width="100%">
+                                                            <table border="0" cellpadding="0" cellspacing="0"
+                                                                class="icons_block block-1" role="presentation"
+                                                                style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
+                                                                <tr>
+                                                                    <td class="pad"
+                                                                        style="vertical-align:middle;color:#9d9d9d;font-family:inherit;font-size:15px;padding-bottom:5px;padding-top:5px;text-align:center">
+                                                                        <table cellpadding="0" cellspacing="0"
+                                                                            role="presentation"
+                                                                            style="mso-table-lspace:0;mso-table-rspace:0"
+                                                                            width="100%">
+                                                                            <tr>
+                                                                                <td class="alignment"
+                                                                                    style="vertical-align:middle;text-align:center">
+                                                                                </td>
+                                                                            </tr>
+                                                                        </table>
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+            </table><!-- End -->
+        </body>
+
+        </html>');
+    
+        $mailManager->sendGeneralMessage($email, "CEDA - Notificación estado solicitud", $htmlMail);
+    }
+
+    public function saveLog($id_usuario, $accion){
+        $bitacoraTable = new \ORM\Model\Entity\BitacoraTable($this->adapter);
+        $params = array( "id_usuario" => $id_usuario,
+                "accion" => $accion );
+        $result = $bitacoraTable->insert($params);
+        return;
+    }
+
+
+
+    public function premiosAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+        //cambiar al layout administrativo...
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+        
+        $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
+        $fileManager = new \Utilidades\Service\FileManager();
+        $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
+        $idSolicitud = $this->params()->fromRoute('val2',0);
+
+        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
+        $settings = $configuracionTable->getConfiguracion();
+        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
+        
+        
+        
+
+        if ($this->getRequest()->isPost()) {
+
+            $params = $this->params()->fromPost();
+    
+            $file_name = $_FILES['subir_archivo']['name'];
+            
+            if($this->params()->fromPost("_method") == "put"){
+                unset($params['_method']);
+
+                if($file_name){
+                    $encripted_name = $fileManager->uploadFile($file_name);
+                    //No se logro subir el archivo al servidor
+                    if(!$encripted_name){
+                        $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                        $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                        return;
+                    }
+
+                    $key = "url_file";
+                    $params[$key] = $encripted_name;
+                    
+                }
+
+                $result = $premiosTable->update($params, ["id_premio" => $idSolicitud]);
+                if ($result > 0) {
+                    $this->saveLog($id_usuario, 'Se edito la solicitud de premios con id '. $idSolicitud);
+                    $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
+                } else {
+                    $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar editar la solicitud.'); 
+                }
+
+
+            }else{
+                $encripted_name = $fileManager->uploadFile($file_name);
+                //No se logro subir el archivo al servidor
+                if(!$encripted_name){
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                    return;
+                }
+    
+                $key = "url_file";
+                $params[$key] = $encripted_name;
+    
+                $result = $premiosTable->insert($params);
+        
+                if ($result > 0) {
+                    $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: premios');
+                    $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
+                    
+                } else {
+                    $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.'); 
+                    
+                }
+                
+            }
+        }
+
+
+        if($idSolicitud == 0){
+            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+        }else{
+            $solicitud = $premiosTable->getPremiosById($id_usuario, $idSolicitud);
+            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+        }
+        
+    }
+
+
+    public function formacionAcademicaAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+        //cambiar al layout administrativo...
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+        $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
+        $fileManager = new \Utilidades\Service\FileManager();
+        $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
+        $idSolicitud = $this->params()->fromRoute('val2',0);
+
+        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
+        $settings = $configuracionTable->getConfiguracion();
+        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
+
+        if ($this->getRequest()->isPost()) {
+
+            $params = $this->params()->fromPost();
+            $file_name = $_FILES['subir_archivo']['name'];
+
+            if($this->params()->fromPost("_method") == "put"){
+                unset($params['_method']);
+
+                if($file_name){
+                    $encripted_name = $fileManager->uploadFile($file_name);
+                    //No se logro subir el archivo al servidor
+                    if(!$encripted_name){
+                        $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                        return;
+                    }
+                    $key = "url_constancia";
+                    $params[$key] = $encripted_name; 
+                }
+
+                if($params['categoria'] == 'graduado'){
+                    $params['anio_graduacion'] = $params['fecha_obtencion'];
+                }else if($params['categoria'] == 'pensum'){
+                    $params['anio_cierre_pensum'] = $params['fecha_obtencion'];
+                }
+    
+                /*$key = "url_constancia";
+                $params[$key] = $encripted_name;*/
+    
+                $puntos = floatval($params["puntos"]);
+                $params["puntos"] = $puntos;
+    
+                unset($params['categoria']);
+                unset($params['fecha_obtencion']);
+
+                $result = $formacionTable->update($params, ["id_formacion_academica" => $idSolicitud]);
+                if ($result > 0) {
+                    $this->saveLog($id_usuario, 'Se edito la solicitud de formación academica con id '. $idSolicitud);
+                    $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
+                } else {
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar editar la solicitud.'); 
+                }
+
+            }else{
+                $encripted_name = $fileManager->uploadFile($file_name);
+                //No se logro subir el archivo al servidor
+                if(!$encripted_name){
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                    return;
+                }
+                
+    
+                if($params['categoria'] == 'graduado'){
+                    $params['anio_graduacion'] = $params['fecha_obtencion'];
+                }else if($params['categoria'] == 'pensum'){
+                    $params['anio_cierre_pensum'] = $params['fecha_obtencion'];
+                }
+    
+                $key = "url_constancia";
+                $params[$key] = $encripted_name;
+    
+                $puntos = floatval($params["puntos"]);
+                $params["puntos"] = $puntos;
+    
+                unset($params['categoria']);
+                unset($params['fecha_obtencion']);
+    
+                $result = $formacionTable->insert($params);
+                if ($result > 0) {
+                    $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria de formación académica');
+                    $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
+                } else {
+                    $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                }
+                
+            } 
+
+        }
+
+        if($idSolicitud == 0){
+            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+        }else{
+            $solicitud = $formacionTable->getFormacionAcademicaById($id_usuario, $idSolicitud);
+            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+        }
+    }
+
+    public function cargosAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+        //cambiar al layout administrativo...
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+        $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
+        $fileManager = new \Utilidades\Service\FileManager();
+        $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
+        $idSolicitud = $this->params()->fromRoute('val2',0);
+
+        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
+        $settings = $configuracionTable->getConfiguracion();
+        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
+
+        if ($this->getRequest()->isPost()) {
+
+            $params = $this->params()->fromPost();
+            $file_name = $_FILES['subir_archivo']['name'];
+
+            if($this->params()->fromPost("_method") == "put"){
+                unset($params['_method']);
+
+                try {
+                    if($file_name){
+                        $encripted_name = $fileManager->uploadFile($file_name);
+                        //No se logro subir el archivo al servidor
+                        if(!$encripted_name){
+                            $this->saveLog($id_usuario, 'Error al editar la solicitud');
+                            $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar editar la solicitud.');
+                            return;
+                        }
+                        $key = "url_constancia";
+                        $params[$key] = $encripted_name; 
+                    }
+    
+                    $result = $cargosTable->update($params, ["id_cargo" => $idSolicitud]);
+                    if ($result > 0) {
+                        $this->saveLog($id_usuario, 'Se edito la solicitud de cargos desempeñados con id '. $idSolicitud);
+                        $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
+                    } else {
+                        $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                        $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar editar la solicitud.'); 
+                    }
+                } catch (\Exception $exc) {
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar editar la solicitud.'); 
+                }
+                
+
+            }else{
+
+                try {
+                    $encripted_name = $fileManager->uploadFile($file_name);
+                    //No se logro subir el archivo al servidor
+                    if(!$encripted_name){
+                        $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                        $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                        return;
+                    }
+                    
+                    $key = "url_constancia";
+                    $params[$key] = $encripted_name;
+        
+                    $result = $cargosTable->insert($params);
+                    if ($result > 0) {
+                        $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: cargos desempeñados');
+                        $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
+                    } else {
+                        $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                        $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                    }
+                } catch (\Exception $exc) {
+                    //throw $th;
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar editar la solicitud.'); 
+                }
+                
+            }
+
+        }
+
+        if($idSolicitud == 0){
+            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+        }else{
+            $solicitud = $cargosTable->getCargoById($id_usuario, $idSolicitud);
+            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+        }
+
+        //return new ViewModel(["data" => $this->authService->getIdentity()->getData()]);
+    }
+
+    public function investigacionesAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+        //cambiar al layout administrativo...
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+        $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
+        $fileManager = new \Utilidades\Service\FileManager();
+        $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
+        $idSolicitud = $this->params()->fromRoute('val2',0);
+
+
+        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
+        $settings = $configuracionTable->getConfiguracion();
+        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
+
+        if ($this->getRequest()->isPost()) {
+
+            $params = $this->params()->fromPost();
+            $file_name = $_FILES['subir_archivo']['name'];
+            if($this->params()->fromPost("_method") == "put"){
+                unset($params['_method']);
+
+                if($file_name){
+                    $encripted_name = $fileManager->uploadFile($file_name);
+                    //No se logro subir el archivo al servidor
+                    if(!$encripted_name){
+                        $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                        $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                        return;
+                    }
+                    $key = "url_constancia";
+                    $params[$key] = $encripted_name; 
+                }
+
+                $result = $investigacionesTable->update($params, ["id_investigacion" => $idSolicitud]);
+                if ($result > 0) {
+                    $this->saveLog($id_usuario, 'Se edito la solicitud de investigaciones/publicaciones con id '. $idSolicitud);
+                    $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
+                } else {
+                    $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar editar la solicitud.'); 
+                }
+
+            }else{
+                $encripted_name = $fileManager->uploadFile($file_name);
+                //No se logro subir el archivo al servidor
+                if(!$encripted_name){
+                    $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                    return;
+                }
+                
+                $key = "url_constancia";
+                $params[$key] = $encripted_name;
+    
+                $result = $investigacionesTable->insert($params);
+                if ($result > 0) {
+                    $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: Investigaciones/publicaciones');
+                    $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
+                } else {
+                    $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                }
+            }
+
+        }
+
+       
+        if($idSolicitud == 0){
+            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+        }else{
+            $solicitud = $investigacionesTable->getInvestigacionesById($id_usuario, $idSolicitud);
+            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+        }
+    }
+
+    public function capacitacionProfesionalAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+        //cambiar al layout administrativo...
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+        $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
+        $fileManager = new \Utilidades\Service\FileManager();
+        $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
+        $idSolicitud = $this->params()->fromRoute('val2',0);
+
+        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
+        $settings = $configuracionTable->getConfiguracion();
+        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
+
+        if ($this->getRequest()->isPost()) {
+
+            $params = $this->params()->fromPost();
+            $file_name = $_FILES['subir_archivo']['name'];
+
+            if($this->params()->fromPost("_method") == "put"){
+                unset($params['_method']);
+                if($file_name){
+                    $encripted_name = $fileManager->uploadFile($file_name);
+                    //No se logro subir el archivo al servidor
+                    if(!$encripted_name){
+                        $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                        $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                        return;
+                    }
+                    $key = "url_constancia";
+                    $params[$key] = $encripted_name; 
+                }
+
+                $result = $capacitacionTable->update($params, ["id_capacitacion" => $idSolicitud]);
+                if ($result > 0) {
+                    $this->saveLog($id_usuario, 'Se edito la solicitud de capacitación profesional con id '. $idSolicitud);
+                    $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
+                } else {
+                    $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar editar la solicitud.'); 
+                }
+
+            }else{
+                $encripted_name = $fileManager->uploadFile($file_name);
+                //No se logro subir el archivo al servidor
+                if(!$encripted_name){
+                    $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                    return;
+                }
+    
+                $key = "url_constancia";
+                $params[$key] = $encripted_name;
+    
+                $result = $capacitacionTable->insert($params);
+                
+                if ($result > 0) {
+                    $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: capacitación profesional');
+                    $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
+                } else {
+                    $this->saveLog($id_usuario, 'Error al realizar la solicitud');
+                    $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                }
+            }
+
+        }
+
+        if($idSolicitud == 0){
+            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+        }else{
+            $solicitud = $capacitacionTable->getCapacitacionById($id_usuario, $idSolicitud);
+            //var_dump($solicitud);
+            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+        }
+    }
+
+    //Administracion de las solicitudes
+    public function solicitudesAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+        //cambiar al layout administrativo...
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+        //Obtenemos la lista de solicitudes 
+        $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
+        $premios = $premiosTable->getPremios();
+
+        $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
+        $cargos = $cargosTable->getCargos();
+
+        $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
+        $capacitacionList = $capacitacionTable->getCapacitacionProfesional();
+        
+        $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
+        $formacionList = $formacionTable->getFormacionAcademica();
+        
+        $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
+        $investigaciones = $investigacionesTable->getInvestigaciones();
+
+
+        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "premios"=> $premios, "cargos"=>$cargos, "capacitacion"=>$capacitacionList, "formacion"=> $formacionList, "investigaciones"=>$investigaciones]);
+    }
+
+
+    public function misSolicitudesAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+        //cambiar al layout administrativo...
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+
+        //Obtenemos todos los méritos académicos por usuario
+        $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
+        $misPremios = $premiosTable->getPremiosByUser($this->authService->getIdentity()->getData()["usuario"]);
+
+        $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
+        $misCargos = $cargosTable->getCargosByUser($this->authService->getIdentity()->getData()["usuario"]);
+
+        $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
+        $misCapacitaciones = $capacitacionTable->getCapacitacionProfesionalByUser($this->authService->getIdentity()->getData()["usuario"]);
+        
+        $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
+        $miformacionacademica = $formacionTable->getFormacionAcademicaByUser($this->authService->getIdentity()->getData()["usuario"]);
+        
+        $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
+        $misInvestigaciones = $investigacionesTable->getInvestigacionesByUser($this->authService->getIdentity()->getData()["usuario"]);
+        
+        $puntosTable = new \ORM\Model\Entity\PuntosTable($this->adapter);
+        $misPuntos = $puntosTable->getPuntosByUser($this->authService->getIdentity()->getData()["usuario"]);
+        
+        $puntajeActual = $misPuntos ? floatval($misPuntos[0]["capacitacion_profesional"]) + floatval($misPuntos[0]["formacion_academica"]) + floatval($misPuntos[0]["premios"]) + floatval($misPuntos[0]["investigaciones"]) + floatval($misPuntos[0]["cargos"]) : 0;
+        
+        if(!$misPuntos){
+            $misPuntos = array( ["premios" => "0",
+                "investigaciones" => "0",
+                "cargos" => "0",
+                "capacitacion_profesional" => "0",
+                "formacion_academica" => "0" ]);
+        }
+
+        return new ViewModel(["data" => $this->authService->getIdentity()->getData(),  "premios"=> $misPremios, "cargos"=> $misCargos, "formacionAcademica" => $miformacionacademica, "capacitacionProfesional"=> $misCapacitaciones, "investigaciones"=>  $misInvestigaciones, "miPuntaje" =>$puntajeActual, "puntos" => $misPuntos]);
+    }
+
+
+    public function admCargosAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+        $id_admin = $this->authService->getIdentity()->getData()["usuario"];
+        $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
+        $puntosTable = new \ORM\Model\Entity\PuntosTable($this->adapter);
+        $userTable = new \ORM\Model\Entity\UsuarioTable($this->adapter);
+        
+        $id_solicitud = $this->params()->fromRoute('val2',0);
+        $solicitud = $cargosTable->getSolicitud($id_solicitud);
+
+        //var_dump($solicitud);
+
+        if ($this->params()->fromPost("action") == "rechazar") {
+            $params = $this->params()->fromPost();
+            $params['id_estado'] = '3';
+            
+            $user = $userTable->getUserById($params['id_usuario']);
+            
+            unset($params['id_usuario']);
+            unset($params['action']);
+
+            $result = $cargosTable->update($params, ["id_cargo" => $id_solicitud]);
+                
+            if ($result > 0) {
+                //$this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
+                $this->saveLog($id_admin, 'Se rechazo la solicitud de cargos desempeñados con id: ' . $id_solicitud);
+                $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
+                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
+            }
+           
+        }
+
+        if ($this->params()->fromPost("action") == "aceptar") {
+            $params = array( "mensaje" => "Solicitud aceptada con éxito",
+                "id_estado" => '2' );
+
+            $resultado = $cargosTable->update($params, ["id_cargo" => $id_solicitud]);
+            
+            
+            if ($resultado > 0) {
+                $id_usuario = $this->params()->fromPost("id_usuario");
+                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+                $puntosActuales = $misPuntos ? $misPuntos[0]["cargos"] : 0;
+                $year = date("Y");
+                $auxPts = $this->params()->fromPost("puntos");
+                if($misPuntos){
+                    //Ya hay puntos 
+                    $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
+                    if($nuevoPuntaje >= 4){
+                        $nuevoPuntaje = 4;
+                    }
+                    $params = array( "cargos" => $nuevoPuntaje,
+                    "year"=>$year);
+                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    
+                }else{
+                    //No hay puntos
+                    $params = array( "cargos" => $auxPts,
+                                     "id_usuario" => $id_usuario,
+                                     "year"=>$year);
+                    $result = $puntosTable->insert($params);
+                }
+
+                $user = $userTable->getUserById($id_usuario);
+                //$this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
+                $this->saveLog($id_admin, 'Se acepto la solicitud de cargos desempeñados con id: ' . $id_solicitud);
+                $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
+                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
+            }
+
+        }
+
+        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
+
+    }
+
+    public function admPremiosAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+
+        $id_admin = $this->authService->getIdentity()->getData()["usuario"];
+        $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
+        $puntosTable = new \ORM\Model\Entity\PuntosTable($this->adapter);
+        $userTable = new \ORM\Model\Entity\UsuarioTable($this->adapter);
+        
+        $id_solicitud = $this->params()->fromRoute('val2',0);
+        $solicitud = $premiosTable->getSolicitud($id_solicitud);
+
+        //var_dump($solicitud);
+        if ($this->params()->fromPost("action") == "rechazar") {
+            $params = $this->params()->fromPost();
+            $params['id_estado'] = '3';
+
+            $user = $userTable->getUserById($params['id_usuario']);
+
+            unset($params['id_usuario']);
+            unset($params['action']);
+
+            $result = $premiosTable->update($params, ["id_premio" => $id_solicitud]);
+                
+            if ($result > 0) {
+                // $this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
+                $this->saveLog($id_admin, 'Se rechazo la solicitud de premios con id: ' . $id_solicitud);
+                $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
+                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
+            }
+           
+        }
+
+        if ($this->params()->fromPost("action") == "aceptar") {
+            $params = array( "mensaje" => "Solicitud aceptada con éxito",
+                "id_estado" => '2' );
+
+            $resultado = $premiosTable->update($params, ["id_premio" => $id_solicitud]);
+            
+            
+            if ($resultado > 0) {
+                $id_usuario = $this->params()->fromPost("id_usuario");
+                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+                $puntosActuales = $misPuntos ? $misPuntos[0]["premios"] : 0;
+                $year = date("Y");
+                $auxPts = $this->params()->fromPost("puntos");
+                if($misPuntos){
+                    //Ya hay puntos 
+                    $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
+                    if($nuevoPuntaje >= 2){
+                        $nuevoPuntaje = 2;
+                    }else{
+                        $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);;
+                    }
+                    /* //modificado a solicitud de CEDA 2025-02-19 17:00
+
+                    if($auxPts >= floatval($puntosActuales)){
+                        $nuevoPuntaje = $auxPts;
+                    }else{
+                        $nuevoPuntaje = $puntosActuales;
+                    }*/
+                    $params = array( "premios" => $nuevoPuntaje,
+                    "year"=>$year);
+                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    
+                }else{
+                    //No hay puntos
+                    $params = array( "premios" => $auxPts,
+                                     "id_usuario" => $id_usuario,
+                                     "year"=>$year);
+                    $result = $puntosTable->insert($params);
+                }
+
+                $user = $userTable->getUserById($id_usuario);
+               //$this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
+                $this->saveLog($id_admin, 'Se acepto la solicitud de premios con id: ' . $id_solicitud);
+                $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
+                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
+            }
+            
+        }
+
+        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
+
+    }
+
+    public function admCapacitacionProfesionalAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+        $id_admin = $this->authService->getIdentity()->getData()["usuario"];
+
+        $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
+        $puntosTable = new \ORM\Model\Entity\PuntosTable($this->adapter);
+        $userTable = new \ORM\Model\Entity\UsuarioTable($this->adapter);
+        
+        $id_solicitud = $this->params()->fromRoute('val2',0);
+        $solicitud = $capacitacionTable->getSolicitud($id_solicitud);
+        //var_dump($solicitud);
+
+        if ($this->params()->fromPost("action") == "rechazar") {
+            $params = $this->params()->fromPost();
+            $params['id_estado'] = '3';
+
+            $user = $userTable->getUserById($params['id_usuario']);
+
+            unset($params['id_usuario']);
+            unset($params['action']);
+
+            $result = $capacitacionTable->update($params, ["id_capacitacion" => $id_solicitud]);
+                
+            if ($result > 0) {
+                //$this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
+                $this->saveLog($id_admin, 'Se rechazo la solicitud de capacitación profesional con id: ' . $id_solicitud);
+                $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
+                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
+            }
+           
+        }
+
+        if ($this->params()->fromPost("action") == "aceptar") {
+            $params = array( "mensaje" => "Solicitud aceptada con éxito",
+                "id_estado" => '2' ); //cambiar a estado 2
+
+            $resultado = $capacitacionTable->update($params, ["id_capacitacion" => $id_solicitud]);
+            
+       // print_r($resultado);die;
+            if ($resultado > 0) {
+                $id_usuario = $this->params()->fromPost("id_usuario");
+                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+                $puntosActuales = $misPuntos ? $misPuntos[0]["capacitacion_profesional"] : 0;
+                $year = date("Y");
+                $auxPts = $this->params()->fromPost("puntos");
+                
+                if($misPuntos){
+                    
+                    //Ya hay puntos 
+                    $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
+                  /*
+                    print_r('<br>puntosActuales = '.$puntosActuales);
+                    print_r('<br>auxPts = '.$auxPts);
+                    print_r('<br>nuevoPuntaje1 = '.$nuevoPuntaje);*/
+                    if($nuevoPuntaje >= 8){
+                        $nuevoPuntaje = 8;
+                    }else{
+                        $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);;
+                    }
+                    /* //modificado a solicitud de CEDA 2025-02-18 13:00
+                    if($auxPts >= floatval($puntosActuales)){
+                        $nuevoPuntaje = $auxPts;
+                    }else{
+                        $nuevoPuntaje = $puntosActuales;
+                    }*/
+                    //print_r('<br>nuevoPuntaje2 = '.$nuevoPuntaje);
+                    //die;
+                    $params = array( "capacitacion_profesional" => $nuevoPuntaje,
+                    "year"=>$year);
+
+                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    
+                }else{
+                    //No hay puntos
+                    $params = array( "capacitacion_profesional" => $auxPts,
+                                    "id_usuario" => $id_usuario,
+                                    "year"=>$year);
+                    $result = $puntosTable->insert($params);
+                }
+
+                $user = $userTable->getUserById($id_usuario);
+                // $this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
+                $this->saveLog($id_admin, 'Se acepto la solicitud de capacitación profesional con id: ' . $id_solicitud);
+                $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
+                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
+            }
+
+        }
+
+        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
+
+    }
+
+    public function admFormacionAcademicaAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+        $id_admin = $this->authService->getIdentity()->getData()["usuario"];
+        $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
+        $puntosTable = new \ORM\Model\Entity\PuntosTable($this->adapter);
+        $userTable = new \ORM\Model\Entity\UsuarioTable($this->adapter);
+
+        $id_solicitud = $this->params()->fromRoute('val2',0);
+        $solicitud = $formacionTable->getSolicitud($id_solicitud);
+        //var_dump($solicitud);
+
+        if ($this->params()->fromPost("action") == "rechazar") {
+            $params = $this->params()->fromPost();
+            $params['id_estado'] = '3';
+
+            $user = $userTable->getUserById($params['id_usuario']);
+
+            unset($params['id_usuario']);
+            unset($params['action']);
+
+            $result = $formacionTable->update($params, ["id_formacion_academica" => $id_solicitud]);
+                
+            if ($result > 0) {
+                //$this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
+                $this->saveLog($id_admin, 'Se rechazo la solicitud de formación profesional con id: ' . $id_solicitud);
+                $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
+                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
+            }
+           
+        }
+
+        if ($this->params()->fromPost("action") == "aceptar") {
+            $params = array( "mensaje" => "Solicitud aceptada con éxito",
+                "id_estado" => '2' );
+
+            $resultado = $formacionTable->update($params, ["id_formacion_academica" => $id_solicitud]);
+            
+
+            if ($resultado > 0) {
+                $id_usuario = $this->params()->fromPost("id_usuario");
+                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+                
+                $puntosActuales = $misPuntos ? $misPuntos[0]["formacion_academica"] : 0;
+                $year = date("Y");
+                $auxPts = $this->params()->fromPost("puntos");
+                if($misPuntos){
+                    //Ya hay puntos 
+                    /*$nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
+                    if($nuevoPuntaje >= floatval($puntosActuales)){
+                        $nuevoPuntaje = $nuevoPuntaje;
+                    }*/
+                    if($auxPts >= floatval($puntosActuales)){
+                        $nuevoPuntaje = $auxPts;
+                    }else{
+                        $nuevoPuntaje = $puntosActuales;
+                    }
+                    $params = array( "formacion_academica" => $nuevoPuntaje,
+                    "year"=>$year);
+                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    
+                }else{
+                    //No hay puntos
+                    $params = array( "formacion_academica" => $auxPts,
+                                    "id_usuario" => $id_usuario,
+                                    "year"=>$year);
+                    $result = $puntosTable->insert($params);
+                }
+
+                $user = $userTable->getUserById($id_usuario);
+                //$this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
+                $this->saveLog($id_admin, 'Se acepto la solicitud de formación académica con id: ' . $id_solicitud);
+                $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
+                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
+            }
+
+        }
+
+        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
+
+    }
+
+    public function admInvestigacionesAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+        $id_admin = $this->authService->getIdentity()->getData()["usuario"];
+        $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
+        $puntosTable = new \ORM\Model\Entity\PuntosTable($this->adapter);
+        $userTable = new \ORM\Model\Entity\UsuarioTable($this->adapter);
+        
+        $id_solicitud = $this->params()->fromRoute('val2',0);
+        $solicitud = $investigacionesTable->getSolicitud($id_solicitud);
+
+        if ($this->params()->fromPost("action") == "rechazar") {
+            $params = $this->params()->fromPost();
+            $params['id_estado'] = '3';
+
+            $user = $userTable->getUserById($params['id_usuario']);
+
+            unset($params['id_usuario']);
+            unset($params['action']);
+
+            $result = $investigacionesTable->update($params, ["id_investigacion" => $id_solicitud]);
+                
+            if ($result > 0) {
+                //$this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
+                $this->saveLog($id_admin, 'Se rechazo la solicitud de investigaciones/publicaciones con id: ' . $id_solicitud);
+                $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
+                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
+            }
+           
+        }
+
+        if ($this->params()->fromPost("action") == "aceptar") {
+            $params = array( "mensaje" => "Solicitud aceptada con éxito",
+                "id_estado" => '2' );
+
+            $resultado = $investigacionesTable->update($params, ["id_investigacion" => $id_solicitud]);
+
+            if ($resultado > 0) {
+                $id_usuario = $this->params()->fromPost("id_usuario");
+                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+                $puntosActuales = $misPuntos ? $misPuntos[0]["investigaciones"] : 0;
+                $year = date("Y");
+                $auxPts = $this->params()->fromPost("puntos");
+                
+                if($misPuntos){
+                    
+                    //Ya hay puntos 
+                    $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
+                  /*
+                    print_r('<br>puntosActuales = '.$puntosActuales);
+                    print_r('<br>auxPts = '.$auxPts);
+                    print_r('<br>nuevoPuntaje1 = '.$nuevoPuntaje);*/
+                    if($nuevoPuntaje >= 6){
+                        $nuevoPuntaje = 6;
+                    }else{
+                        $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);;
+                    }
+                     //modificado a solicitud de CEDA 2025-02-18 13:00*
+                    
+                    $params = array( "investigaciones" => $nuevoPuntaje,
+                    "year"=>$year);
+
+                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    
+                }
+                
+                /*
+                if($misPuntos){
+                    //Ya hay puntos 
+                    //$nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
+                    // if($nuevoPuntaje >= floatval($puntosActuales)){
+                    //     $nuevoPuntaje = $nuevoPuntaje;
+                    // }
+                    if($auxPts >= floatval($puntosActuales)){
+                        $nuevoPuntaje = $auxPts;
+                    }else{
+                        $nuevoPuntaje = $puntosActuales;
+                    }
+                    $params = array( "investigaciones" => $nuevoPuntaje,
+                    "year"=>$year);
+                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    
+                }*/
+                else{
+                    //No hay puntos
+                    $params = array( "investigaciones" => $auxPts,
+                                     "id_usuario" => $id_usuario,
+                                     "year"=>$year);
+                    $result = $puntosTable->insert($params);
+                }
+
+                $user = $userTable->getUserById($id_usuario);
+                //$this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
+                $this->saveLog($id_admin, 'Se rechazo la solicitud de investigaciones/publicaciones con id: ' . $id_solicitud);
+                $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
+                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
+            }
+
+        }
+
+        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
+
+    }
+
+
+    //Configuracion 
+    public function configuracionAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+        //cambiar al layout administrativo...
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+        $id_admin = $this->authService->getIdentity()->getData()["usuario"];
+        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
+
+        $settings = $configuracionTable->getConfiguracion();
+
+        $params = $this->params()->fromPost();
+        
+        if ($this->getRequest()->isPost()) {
+            $params = $this->params()->fromPost();
+            
+            $result = (!$settings) ? $configuracionTable->insert($params) : $configuracionTable->update($params);
+            //var_dump($result);
+            
+            if ($result > 0) {
+                $settings = $configuracionTable->getConfiguracion();
+                $this->saveLog($id_admin, 'Se actualizó la configuración general: ' . $params['nota']);
+                $this->flashMessenger()->addSuccessMessage('Configuración guardada con éxito');
+            } else {
+                $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+            }
+
+        }
+
+        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "settings" => $settings]);
+    }
+
+    public function reportesAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+        //cambiar al layout administrativo...
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+
+        $userTable = new \ORM\Model\Entity\UsuarioTable($this->adapter);
+
+        $reporte1 = $userTable->getReporte1and2();
+        // var_dump($reporte1);
+
+        //Obtenemos la lista de solicitudes  para el reporte 3
+        $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
+        $premios = $premiosTable->getPremios();
+        $premiospendientes = $premiosTable->getPremiosByState('1');
+        $premiosAceptados = $premiosTable->getPremiosByState('2');
+        $premiosRechazados = $premiosTable->getPremiosByState('3');
+
+        $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
+        $cargos = $cargosTable->getCargos();
+        $cargosPendientes = $cargosTable->getCargosByState('1');
+        $cargosAceptados = $cargosTable->getCargosByState('2');
+        $cargosRechazados = $cargosTable->getCargosByState('3');
+
+        $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
+        $capacitacionList = $capacitacionTable->getCapacitacionProfesional();
+        $capacitacionesPendientes = $capacitacionTable->getCapacitacionProfesionalByState('1');
+        $capacitacionesAceptados = $capacitacionTable->getCapacitacionProfesionalByState('2');
+        $capacitacionesRechazados = $capacitacionTable->getCapacitacionProfesionalByState('3');
+        
+        $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
+        $formacionList = $formacionTable->getFormacionAcademica();
+        $formacionesPendientes = $formacionTable->getFormacionAcademicaByState('1');
+        $formacionesAceptados = $formacionTable->getFormacionAcademicaByState('2');
+        $formacionesRechazados = $formacionTable->getFormacionAcademicaByState('3');
+        
+        $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
+        $investigaciones = $investigacionesTable->getInvestigaciones();
+        $investigacionesPendientes = $investigacionesTable->getInvestigacionesByState('1');
+        $investigacionesAceptados = $investigacionesTable->getInvestigacionesByState('2');
+        $investigacionesRechazados = $investigacionesTable->getInvestigacionesByState('3');
+
+        $reporte3 = array( "premios" => count($premios),
+                "cargos" => count($cargos),
+                "capacitacion" => count($capacitacionList),
+                "formacion" => count($formacionList),
+                "investigaciones" => count($investigaciones)
+        );
+
+        $contadores = array(
+            "ingresadas" => count($premiospendientes) + count($cargosPendientes) + count($capacitacionesPendientes) + count($formacionesPendientes) + count($investigacionesPendientes),
+            "aceptadas" => count($premiosAceptados) + count($cargosAceptados) + count($capacitacionesAceptados) + count($formacionesAceptados) + count($investigacionesAceptados),
+            "rechazadas" => count($premiosRechazados) + count($cargosRechazados) + count($capacitacionesRechazados)+ count($formacionesRechazados) + count($investigacionesRechazados)
+        );
+
+        //var_dump($contadores);
+
+        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataR1" => $reporte1, "dataR3" => $reporte3, "contadores" => $contadores]);
+    }
+
+
+    public function bitacoraAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+        //cambiar al layout administrativo...
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+        $logsTable = new \ORM\Model\Entity\BitacoraTable($this->adapter);
+
+        $logs = $logsTable->getAllLogs();
+
+
+        //var_dump($logs);
+        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "logs"=> $logs]);
+    }
+    
+
+    public function informesAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+        $id = $this->authService->getIdentity()->getData()["usuario"];
+        $informesTable = new \ORM\Model\Entity\InformeTable($this->adapter);
+        $fileManager = new \Utilidades\Service\FileManager();
+
+        if ($this->getRequest()->isPost()) {
+            $params = $this->params()->fromPost();
+            $file_name = $_FILES['subir_archivo']['name'];
+
+            $encripted_name = $fileManager->uploadFile($file_name);
+            //No se logro subir el archivo al servidor
+            if(!$encripted_name){
+                $this->saveLog($id, 'Error al realizar la solicitud');
+                $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
+                return;
+            }
+
+            $key = "url_informe";
+            $params[$key] = $encripted_name;
+
+            $result = $informesTable->insert($params);
+            
+            if ($result > 0) {
+                $this->saveLog($id, 'Se agrego un nuevo informe de actividades');
+                $this->flashMessenger()->addSuccessMessage('Informe cargado correctamente');
+            } else {
+                $this->saveLog($id, 'Error al realizar la solicitud');
+                $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar cargar el informe.');
+            }
+
+
+        }
+
+        $informes = $informesTable->getInformesByUser($id);
+        return new ViewModel(["informes" => $informes, "acceso" => $this->acceso, "data" => $this->authService->getIdentity()->getData()]);
+    }
+
+
+    public function admInformesAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+   
+        $informesTable = new \ORM\Model\Entity\InformeTable($this->adapter);
+
+        $data = $informesTable->getInformes();
+        return new ViewModel(["informes" => $data, "acceso" => $this->acceso, "data" => $this->authService->getIdentity()->getData()]);
+    }
+
+}

@@ -1,0 +1,385 @@
+<div id="contador"></div>
+
+<!-- Creacion de solicitud -->
+<?php if (!$this->dataedit): ?>
+<div class="row">
+    <div class="">
+
+
+        <div class="row">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-3 shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-principal text-uppercase mb-1">
+                                    Puntos Solicitud</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="label_pts"> 0 </div>
+                            </div>
+                            <div class="col-auto">
+                                <!-- <i class="fas fa-clipboard-list fa-2x text-gray-300"></i> -->
+                                <i class="fa-solid fa-school fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card flex-fill">
+
+            <div class="card-header">
+                <h5 class="card-title mb-0"> 1. Formación profesional </h5>
+            </div>
+
+            <div class="card-body">
+
+                <form class="user needs-validation" method="POST" enctype="multipart/form-data" novalidate>
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label class="form-label" for="institucion">Institución otorgante *</label>
+                            <input type="text" class="form-control form-control-user" id="institution" name="institucion" maxLength="255" pattern="[A-Za-z0-9äÄëËïÏöÖüÜáéíóúáéíóúÁÉÍÓÚÂÊÎÔÛâêîôûàèìòùÀÈÌÒÙñÑ._\-,; ]+"
+                                placeholder="Institución otorgante" required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el nombre de la institución
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="">Nivel de titulo obtenido *</label>
+                            <select class="form-select form-control" aria-label="Default select example" name="nivel_titulo" id="nivel_titulo" onchange="validateFormacion(this)" required>
+                                <option selected disabled value="">Seleccione el nivel del titulo obtenido</option>
+                                <option value="doctorado">Estudios de Doctorado</option>
+                                <option value="maestria">Estudios de Maestria</option>
+                                <option value="licenciatura">Estudios a nivel de Licenciatura</option>
+                                <option value="nivel_intermedio">Estudios universitarios a nivel intermedio</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Por favor escriba el nivel del titulo obtenido
+                            </div>
+                        </div>
+                    </div>
+                    
+
+                    
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label for="">Seleccione la categoria *</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="categoria" value="graduado" id="graduado"  onchange="validateCategoria(this)" required>
+                                <label class="form-check-label" for="graduado">
+                                    Graduado
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="categoria" value="pensum" id="pensum" onchange="validateCategoria(this)" required>
+                                <label class="form-check-label" for="pensum">
+                                    Cierre de pensum
+                                </label>
+                                <div class="invalid-feedback">
+                                    Por favor seleccione una categoria
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label for="fecha_obtencion" id="label_year">Año de graduación o cierre de pensum *</label>
+                            <input type="number" class="form-control form-control-user" id="fecha_obtencion" name="fecha_obtencion" pattern="[A-Za-z0-9äÄëËïÏöÖüÜáéíóúáéíóúÁÉÍÓÚÂÊÎÔÛâêîôûàèìòùÀÈÌÒÙñÑ._\-,; ]+"
+                                placeholder="Escriba el año de obtención" required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el año de graduación/cierre de pensum
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label for="">Constancia del titulo obtenido *</label>
+                            <input type="file" class="form-control" onchange="validarExtension(this)"
+                                id="archivo" name="subir_archivo" required>
+                            <div class="invalid-feedback">
+                                Por favor suba la constancia de su titulo obtenido
+                            </div>
+                        </div>
+
+
+                        <div class="col-sm-6">
+                            <label for="titulo">Titulo *</label>
+                            <input type="text" class="form-control form-control-user" id="titulo" name="titulo"
+                                placeholder="Escriba el nombre del titulo obtenido" maxLength="50" pattern="[A-Za-z0-9äÄëËïÏöÖüÜáéíóúáéíóúÁÉÍÓÚÂÊÎÔÛâêîôûàèìòùÀÈÌÒÙñÑ._\-,; ]+" required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el nombre del titulo
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- <input type="hidden" class="form-control form-control-user" id="puntos" name="puntos"> -->
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <input type="hidden" class="form-control" value="1"
+                                id="id_estado" name="id_estado" required>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <input type="hidden" class="form-control" value="<?= $this->data["usuario"]; ?>"
+                                id="id_usuario" name="id_usuario">
+                        </div>
+
+                        <div class="col-sm-6">
+                            <input type="hidden" class="form-control" id="puntos" name="puntos">
+                        </div>
+
+                    </div>
+                    <h7 id="nota" class="nota">NOTA: La Comisión de Evaluación se reserva el derecho de solicitar los originales de los archivos
+                    cargados para su comprobación.</h7>
+                    <div class="mt-3">
+                        <input type="submit" class="btn btn-primary" value="Solicitar" />
+                    </div>
+                    
+                </form>
+
+
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<?php endif; ?>
+<!-- Fin creacion solicitud -->
+
+
+<!-- Edicion de solicitud -->
+<?php if ($this->dataedit): ?>
+<div class="row">
+    <div class="">
+
+
+        <div class="row">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-3 shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-principal text-uppercase mb-1">
+                                    Puntos Solicitud</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="label_pts"> 0 </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card flex-fill">
+
+            <div class="card-header">
+                <h5 class="card-title mb-0"> 1. Edición de Formación profesional </h5>
+            </div>
+
+            <div class="card-body">
+
+                <form class="user needs-validation" method="POST" enctype="multipart/form-data" novalidate>
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label class="form-label" for="institucion">Institución otorgante *</label>
+                            <input type="text" class="form-control form-control-user" id="institution" name="institucion" value="<?= $this->dataedit[0]["institucion"]; ?>"
+                                placeholder="Institución otorgante" maxLength="50" pattern="[A-Za-z0-9äÄëËïÏöÖüÜáéíóúáéíóúÁÉÍÓÚÂÊÎÔÛâêîôûàèìòùÀÈÌÒÙñÑ._\-,; ]+" required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el nombre de la institución
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="">Nivel de titulo obtenido *</label>
+                            <select class="form-select form-control" aria-label="Default select example" name="nivel_titulo" id="nivel_titulo" onchange="validateFormacion(this)" required>
+                                <option selected disabled value="">Seleccione el nivel del titulo obtenido</option>
+                                <option value="doctorado">Estudios de Doctorado</option>
+                                <option value="maestria">Estudios de Maestria</option>
+                                <option value="licenciatura">Estudios a nivel de Licenciatura</option>
+                                <option value="nivel_intermedio">Estudios universitarios a nivel intermedio</option>
+                            </select>
+                            <div class="invalid-feedback">
+                                Por favor escriba el nivel del titulo obtenido
+                            </div>
+                        </div>
+                    </div>
+                    
+
+                    
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label for="">Seleccione la categoria *</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="categoria" value="graduado" id="graduado"  onchange="validateCategoria(this)" required>
+                                <label class="form-check-label" for="graduado">
+                                    Graduado
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="categoria" value="pensum" id="pensum" onchange="validateCategoria(this)" required>
+                                <label class="form-check-label" for="pensum">
+                                    Cierre de pensum
+                                </label>
+                                <div class="invalid-feedback">
+                                    Por favor seleccione una categoria
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label for="fecha_obtencion" id="label_year">Año de graduación o cierre de pensum *</label>
+                            <input type="number" class="form-control form-control-user" id="fecha_obtencion" name="fecha_obtencion"
+                                placeholder="Escriba el año de obtención" required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el año de graduación/cierre de pensum
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label for="">Constancia del titulo obtenido *</label>
+                            <!--  -->
+                            <div id="viewFile">
+                                <a class="btn btn-primary" href="<?= $this->url("meritosHome/meritos", ["action" => "displayfile" , "val1"=> $this->dataedit[0]['url_constancia']]) ?>" target="_blank">
+                                    Constancia
+                                </a>
+
+                                <a class="btn" onclick="changeFile();">
+                                    <i class="fa-solid fa-arrow-rotate-right"></i>
+                                </a>
+                                
+                            </div>
+                            <input type="file" class="form-control"  style="display:none;"  onchange="validarExtension(this)"
+                                id="archivo" name="subir_archivo">
+                            <div class="invalid-feedback">
+                                Por favor suba la constancia de su titulo obtenido
+                            </div>
+                        </div>
+
+
+                        <div class="col-sm-6">
+                            <label for="titulo">Titulo *</label>
+                            <input type="text" class="form-control form-control-user" id="titulo" name="titulo" value="<?= $this->dataedit[0]["titulo"]; ?>"
+                                placeholder="Escriba el nombre del titulo obtenido" maxLength="50" pattern="[A-Za-z0-9äÄëËïÏöÖüÜáéíóúáéíóúÁÉÍÓÚÂÊÎÔÛâêîôûàèìòùÀÈÌÒÙñÑ._\-,; ]+" required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el nombre del titulo
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- <input type="hidden" class="form-control form-control-user" id="puntos" name="puntos"> -->
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <input type="hidden" class="form-control" value="1"
+                                id="id_estado" name="id_estado" required>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <input type="hidden" class="form-control" value="<?= $this->data["usuario"]; ?>"
+                                id="id_usuario" name="id_usuario">
+                        </div>
+
+                        <div class="col-sm-6">
+                            <input type="hidden" class="form-control" id="puntos" name="puntos">
+                        </div>
+
+                        <input name="_method" type="hidden" value="put" />
+
+                    </div>
+
+                    <div class="mt-3">
+                        <input type="submit" class="btn btn-primary" value="Solicitar" />
+                    </div>
+                    
+                </form>
+
+
+
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<script>
+
+let optionsFormacion = [
+    {
+        categoria: 'graduado',
+        nivel_titulo: 'doctorado',
+        puntos: 10
+    },
+    {
+        categoria: 'graduado',
+        nivel_titulo: 'maestria',
+        puntos: 8.5
+    },
+    {
+        categoria: 'graduado',
+        nivel_titulo: 'licenciatura',
+        puntos: 7
+    },
+    {
+        categoria: 'graduado',
+        nivel_titulo: 'nivel_intermedio',
+        puntos: 5
+    },
+    {
+        categoria: 'pensum',
+        nivel_titulo: 'doctorado',
+        puntos: 9
+    },
+    {
+        categoria: 'pensum',
+        nivel_titulo: 'maestria',
+        puntos: 8
+    },
+    {
+        categoria: 'pensum',
+        nivel_titulo: 'licenciatura',
+        puntos: 6
+    }
+]
+
+function cargarInfo(data) {
+
+    document.getElementById("nivel_titulo").value = data.nivel_titulo;
+    let categoria = (data.anio_graduacion) ? 'graduado' : 'pensum';
+    
+    if(categoria == 'graduado'){
+        document.getElementById(`graduado`).checked = true;    
+        document.getElementById(`fecha_obtencion`).value = data.anio_graduacion;    
+        
+    }else if(categoria == 'pensum'){
+        document.getElementById(`pensum`).checked = true; 
+        document.getElementById(`fecha_obtencion`).value = data.anio_cierre_pensum;    
+    }
+
+    let valueObject = optionsFormacion.find((e) => e.nivel_titulo == data.nivel_titulo && e.categoria == categoria);
+    document.querySelector("#label_pts").innerHTML = valueObject.puntos;
+    document.querySelector("#puntos").value = valueObject.puntos;
+
+}
+
+cargarInfo(<?= json_encode($this->dataedit[0]) ?>);
+
+</script>
+
+<?php endif; ?>
+<!-- Fin edicion solicitud -->
+
+<script>
+    if('<?= $this->fecha ?>'){
+        contadorTiempoDisponible('<?= $this->fecha ?>');
+    }
+</script>

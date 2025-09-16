@@ -1,0 +1,363 @@
+<!-- Creación de solicitud -->
+<div id="contador"></div>
+
+<?php if (!$this->dataedit): ?>
+    <div class="row">
+
+        <div class="">
+
+            <div class="row">
+                <div class="col-xl-3 col-md-6 mb-4">
+                    <div class="card border-left-1 shadow h-100 py-2">
+                        <div class="card-body">
+                            <div class="row no-gutters align-items-center">
+                                <div class="col mr-2">
+                                    <div class="text-xs font-weight-bold text-principal text-uppercase mb-1">
+                                        Puntos Solicitud</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800" id="label_pts"> 0 </div>
+                                </div>
+                                <div class="col-auto">
+                                    <!-- <i class="fas fa-clipboard-list fa-2x text-gray-300"></i> -->
+                                    <i class="fa-solid fa-award fa-2x text-gray-300"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+            
+            
+            <div class="card flex-fill">
+
+                <div class="card-header">
+                    <h5 class="card-title mb-0"> 5. Premios, menciones honoríficas y reconocimientos a nivel profesional: </h5>
+                </div>
+
+                <div class="card-body">
+
+                    <form class="user needs-validation" method="POST" enctype="multipart/form-data" novalidate>
+                        <div class="form-group row">
+                            <div class="col-sm-6 mb-3 mb-sm-0">
+                                <label class="form-label" for="institucion">Institución otorgante *</label>
+                                <input type="text" class="form-control form-control-user" id="institution" name="institucion" maxLength="255" pattern="[A-Za-z0-9äÄëËïÏöÖüÜáéíóúáéíóúÁÉÍÓÚÂÊÎÔÛâêîôûàèìòùÀÈÌÒÙñÑ._\-,; ]+"
+                                    placeholder="Institución otorgante"  required>
+                                <div class="invalid-feedback">
+                                    Por favor escriba el nombre de la institución
+                                </div>
+                                <!-- <div class="valid-feedback">
+                                    Looks good!
+                                </div> -->
+                            </div>
+                            <div class="col-sm-6">
+                                <label for="fecha_obtencion">Fecha de obtención del reconocimiento *</label>
+                                <input type="date" class="form-control form-control-user" id="fecha_obtenida" name="fecha_obtenida"
+                                    placeholder="Fecha de obtención del reconocimiento" required >
+                                <div class="invalid-feedback">
+                                    Por favor escriba el año de obtención
+                                </div>
+                            </div>
+                        </div>
+                        
+
+                        <!-- <div class="form-group">
+                            <input type="text" class="form-control form-control-user" id="exampleLastName"
+                            placeholder="Ingrese su número de registro docente">
+
+                        </div> -->
+
+                        <div class="form-group row">
+                            <div class="col-sm-6 mb-3 mb-sm-0">
+                                <!-- <input type="password" class="form-control form-control-user"
+                                    id="exampleInputPassword" placeholder="Tipo de reconocimiento"> -->
+                                <label for="">Tipo de reconocimiento *</label>
+                                <select class="form-select form-control" aria-label="Default select example" name="reconocimiento" onchange="validatePremios(this)" required>
+                                <option selected disabled value="">Escoja el tipo de reconocimiento</option>
+                                    <option value="5.2">Reconocimientos y agradecimientos</option>
+                                    <option value="5.1">Premios y/o menciones honoríficas</option>
+                                </select>
+
+                                <div class="invalid-feedback">
+                                    Por favor selecciona el tipo de reconocimiento
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <label for="">Constancia del premio *</label>
+                                <!-- <input type="hidden" name="MAX_FILE_SIZE" value="30000" /> -->
+                                <input type="file" class="form-control" name="subir_archivo" onchange="validarExtension(this)"
+                                    id="archivo" required>
+                                <div class="invalid-feedback">
+                                    Por favor suba la constancia de su premio
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <div class="col-sm-6 mb-3 mb-sm-0">
+                                <input type="hidden" class="form-control" value="1"
+                                    id="id_estado" name="id_estado" required>
+                            </div>
+
+                            <div class="col-sm-6">
+                                <input type="hidden" class="form-control" value="<?= $this->data["usuario"]; ?>"
+                                    id="id_usuario" name="id_usuario">
+                            </div>
+
+                            <div class="col-sm-6">
+                                <input type="hidden" class="form-control" value="0" id="puntos" name="puntos">
+                            </div>
+
+                        </div>
+
+                        <h6 id="nota" class="nota"></h6>
+
+                        <!-- <a class="btn btn-primary btn-user btn-block">
+                            Solicitar
+                        </a> -->
+
+                        <div class="mt-3">
+                            <input type="submit" class="btn btn-primary" value="Solicitar" /> 
+                        </div>
+                        
+                    </form>
+
+
+
+                </div>
+        
+            </div>
+
+        </div>
+
+    </div>
+
+
+<?php endif; ?>
+<!-- Fin creación solicitud -->
+
+
+
+<!-- Edición solicitud -->
+<?php if ($this->dataedit): ?>
+    <div class="row">
+
+    <div class="">
+
+        <div class="row">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-1 shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-principal text-uppercase mb-1">
+                                    Puntos Solicitud</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="label_pts"> 0 </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card flex-fill">
+
+            <div class="card-header">
+                <h5 class="card-title mb-0"> 5. Edición de solicitud de premios, menciones honoríficas y reconocimientos a nivel profesional: </h5>
+            </div>
+
+            <div class="card-body">
+
+                <form class="user needs-validation" method="POST" enctype="multipart/form-data" novalidate>
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label class="form-label" for="institucion">Institución otorgante *</label>
+                            <input type="text" class="form-control form-control-user" id="institution" name="institucion" maxLength="255" pattern="[A-Za-z0-9äÄëËïÏöÖüÜáéíóúáéíóúÁÉÍÓÚÂÊÎÔÛâêîôûàèìòùÀÈÌÒÙñÑ._\-,; ]+"
+                                placeholder="Institución otorgante" value="<?= $this->dataedit[0]["institucion"]; ?>" required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el nombre de la institución
+                            </div>
+                            <!-- <div class="valid-feedback">
+                                Looks good!
+                            </div> -->
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="fecha_obtencion">Fecha de obtención del reconocimiento *</label>
+                            <input type="date" class="form-control form-control-user" id="fecha_obtenida" name="fecha_obtenida" 
+                                placeholder="Fecha de obtención del reconocimiento" value="<?= $this->dataedit[0]["fecha_obtenida"]; ?>" required >
+                            <div class="invalid-feedback">
+                                Por favor escriba el año de obtención
+                            </div>
+                        </div>
+                    </div>
+                    
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <!-- <input type="password" class="form-control form-control-user"
+                                id="exampleInputPassword" placeholder="Tipo de reconocimiento"> -->
+                            <label for="">Tipo de reconocimiento *</label>
+                            <select class="form-select form-control" aria-label="Default select example" id="reconocimiento" name="reconocimiento" onchange="validatePremios(this)" required>
+                                <option disabled value="">Escoja el tipo de reconocimiento</option>
+                                <option value="5.2">Reconocimientos y agradecimientos</option>
+                                <option value="5.1">Premios y/o menciones honoríficas</option>
+                            </select>
+
+                            <div class="invalid-feedback">
+                                Por favor selecciona el tipo de reconocimiento
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="">Constancia del premio *</label>
+                            <!-- <input type="hidden" name="MAX_FILE_SIZE" value="30000" /> -->
+                            <div id="viewFile">
+                                <a class="btn btn-primary" href="<?= $this->url("meritosHome/meritos", ["action" => "displayfile" , "val1"=> $this->dataedit[0]['url_file']]) ?>" target="_blank">
+                                    Constancia
+                                </a>
+
+                                <a class="btn" onclick="changeFile();">
+                                    <i class="fa-solid fa-arrow-rotate-right"></i>
+                                </a>
+                            </div>
+                            <input type="file" class="form-control" name="subir_archivo" style="display:none;"  onchange="validarExtension(this)"
+                                id="archivo">
+                            <div class="invalid-feedback">
+                                Por favor suba la constancia de su premio
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <input type="hidden" class="form-control" value="1"
+                                id="id_estado" name="id_estado" required>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <input type="hidden" class="form-control" value="<?= $this->data["usuario"]; ?>"
+                                id="id_usuario" name="id_usuario">
+                        </div>
+
+                        <div class="col-sm-6">
+                            <input type="hidden" class="form-control" value="0" id="puntos" name="puntos" value="<?= $this->dataedit[0]["puntos"]; ?>">
+                        </div>
+
+                        <input name="_method" type="hidden" value="put" />
+                    </div>
+
+                    <h6 id="nota" class="nota"></h6>
+
+                   
+
+                    <div class="mt-3">
+                        <input type="submit" class="btn btn-primary" value="Editar solicitud" /> 
+                    </div>
+                    
+                </form>
+
+
+
+            </div>
+    
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+function cargarInfo(data) {
+    //console.log(data);
+    const value = data.reconocimiento;
+    document.getElementById("reconocimiento").value = value
+
+    if (value == "5.1") {
+        document.querySelector("#label_pts").innerHTML = "2";
+        document.querySelector("#puntos").value = 2;
+    } else if (value == "5.2") {
+        document.querySelector("#label_pts").innerHTML = "1";
+        document.querySelector("#puntos").value = 1;
+    }
+}
+
+cargarInfo(<?= json_encode($this->dataedit[0]) ?>);
+
+</script>
+
+<?php endif; ?>
+<!-- Fin edición solicitud -->
+
+<script>
+    const setFechaLimite = () => {
+        //console.log('Fecha maxima')
+        let today = new Date();
+        let dd = today.getDate();
+        let mm = today.getMonth()+1; //January is 0!
+        let yyyy = today.getFullYear();
+
+        if(dd<10) {
+            dd='0'+dd
+        } 
+        if(mm<10) {
+            mm='0'+mm
+        } 
+        today = yyyy+'-'+mm+'-'+dd;
+        document.getElementById('fecha_obtenida').max = today;
+    }
+    setFechaLimite();
+
+    
+
+    /*const contadorTiempoDisponible = (fecha) =>{
+        // Fecha y hora objetivo (Año, Mes [0-11], Día, Hora, Minutos, Segundos)
+        // var fechaObjetivo = new Date('2023-12-31T23:59:59');
+      
+        //var fechaObjetivoUTC = moment.utc(fecha);
+        //console.log(fecha)
+        var fechaObjetivoGuatemala = moment(fecha);
+        //console.log(fechaObjetivoGuatemala);
+
+        // Convertir la fecha y hora objetivo a la zona horaria de Guatemala
+        //var fechaObjetivoGuatemala = fechaObjetivoUTC.clone().tz('America/Guatemala');
+
+        function actualizarContador() {
+            // Obtener la fecha y hora actual en la zona horaria de Guatemala
+            var ahoraGuatemala = moment().tz('America/Guatemala');
+
+            // Calcular la diferencia en milisegundos entre la fecha y hora actual y la fecha y hora objetivo
+            var diferencia = fechaObjetivoGuatemala.diff(ahoraGuatemala);
+
+            // Calcular los días, horas, minutos y segundos restantes
+            var duracion = moment.duration(diferencia);
+            var dias = duracion.days();
+            var horas = duracion.hours();
+            var minutos = duracion.minutes();
+            var segundos = duracion.seconds();
+
+            // Mostrar el contador en el elemento con el id 'contador'
+            document.getElementById('contador').innerHTML = `
+                <p>Tiempo disponible: ${dias} días, ${horas} horas, ${minutos} minutos, ${segundos} segundos</p>
+            `;
+
+            // Detener el contador cuando se alcanza la fecha objetivo
+            if (diferencia <= 0) {
+                clearInterval(intervalo);
+                document.getElementById('contador').innerHTML = '';
+            }
+        }
+
+        // Actualizar el contador cada segundo
+        var intervalo = setInterval(actualizarContador, 1000);
+    }*/
+
+    if('<?= $this->fecha ?>'){
+        contadorTiempoDisponible('<?= $this->fecha ?>');
+    }
+
+</script>
+
+

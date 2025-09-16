@@ -1,0 +1,274 @@
+<div class="modal fade" id="modalSolicitudes" tabindex="-1" aria-labelledby="modalSolicitudes" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">Rechazar solicitud</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeModalAdm()">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="exampleFormControlTextarea1" class="form-label">Motivo del rechazo de la solicitud</label>
+                        <textarea class="form-control" id="" name="mensaje" rows="3"></textarea>
+                        <input type='hidden' name='action' value='rechazar' />
+                        <input type='hidden' name='id_usuario' value="<?= $this->solicitudData[0]["id_usuario"]; ?>" />
+                    </div>
+
+                    <div class="mt-3">
+                        <input type="submit" class="btn btn-primary" value="Enviar" /> 
+                    </div>
+                </form>
+
+            </div>
+        
+        </div>
+    </div>
+</div>
+
+
+<div class="row">
+
+    <div class="">
+
+        <div class="row">
+            <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card border-left-5 shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-principal text-uppercase mb-1">
+                                    Puntos Solicitud</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800" id="label_pts"> 0 </div>
+                            </div>
+                            <div class="col-auto">
+                                <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card flex-fill">
+
+            <div class="card-header">
+                <h5 class="card-title mb-0"> Capacitación profesional: Relacionada con la docencia </h5>
+            </div>
+
+            <div class="card-body">
+
+                <form class="user needs-validation" method="POST" enctype="multipart/form-data" novalidate>
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label for="">Tipo de evento académico</label>
+                            <select class="form-select form-control" aria-label="Default select example" id="tipo_evento" name="tipo_evento" onchange="validateEvent(this)" required disabled>
+                            <option selected disabled value="">Seleccione el tipo de evento académico</option>
+                                <option value="2.1">Evento Académico (Curso de 40 horas o más de duración)</option>
+                                <option value="2.2">Actividades académicas con duración menor a 40 horas</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label id="lbl_subcategoria"  for="">Actividad desarrollada</label>
+                            <select  class="form-select form-control" aria-label="Default select example" id="subcategoria" name="subcategoria" onchange="validatePtsEvent(this)"  disabled required>
+                                <option selected disabled value="">Seleccione una actividad</option>
+                            </select>
+                            
+                        </div>
+                    </div>
+                    
+
+                    
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label for="">Institución</label>
+                            <input type="text" class="form-control form-control-user" id="institucion" name="institucion" value="<?= $this->solicitudData[0]["institucion"]; ?>"
+                                placeholder="Escriba el nombre de la Institución" disabled required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el nombre de la institución
+                            </div>
+
+                        </div>
+
+                        <div class="col-sm-6">
+                            <label for="pais">País</label>
+                            <input type="text" class="form-control form-control-user" id="pais" name="pais" value="<?= $this->solicitudData[0]["pais"]; ?>"
+                                placeholder="Escriba el nombre del pais" disabled required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el nombre del pais
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label for="">Área de Capacitación</label>
+                            <input type="text" class="form-control form-control-user" id="area_capacitación" name="area_capacitacion" value="<?= $this->solicitudData[0]["area_capacitacion"]; ?>"
+                                placeholder="Escriba el área de capacitación" disabled required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el área de capacitación
+                            </div>
+
+                        </div> 
+                        <div class="col-sm-6">
+                            <label for="">Nombre del curso</label>
+                            <input type="text" class="form-control form-control-user" id="nombre_curso" name="nombre_curso" value="<?= $this->solicitudData[0]["nombre_curso"]; ?>"
+                                placeholder="Escriba el nombre del curso" disabled required>
+                            <div class="invalid-feedback">
+                                Por favor escriba el nombre del curso
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label for="">Duración del curso</label>
+                            <input type="number" class="form-control form-control-user" id="duración" name="duracion" value="<?= $this->solicitudData[0]["duracion"]; ?>"
+                                placeholder="Escriba la duración del curso" disabled required>
+                            <div class="invalid-feedback">
+                                Por favor escriba la duración del curso
+                            </div>
+                            
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="">Constancia del titulo obtenido</label>
+                            <br>
+                            <a class="btn btn-primary" href="<?= $this->url("meritosHome/meritos", ["action" => "displayfile" , "val1"=> $this->solicitudData[0]['url_constancia']]) ?>" target="_blank">
+                                Constancia
+                            </a>
+                            <!-- <input type="file" class="form-control" name="subir_archivo"
+                                id="archivo" >
+                            <div class="invalid-feedback">
+                                Por favor suba la constancia del titulo obtenido
+                            </div> -->
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <input type="hidden" class="form-control" value="1"
+                                id="id_estado" name="id_estado" required>
+                        </div>
+
+                        <div class="col-sm-6">
+                            <input type="hidden" class="form-control" value="<?= $this->solicitudData[0]["id_usuario"]; ?>" 
+                                id="id_usuario" name="id_usuario">
+                        </div>
+
+                        <div class="col-sm-6">
+                            <input type="hidden" class="form-control" value="0" id="puntos" name="puntos">
+                        </div>
+
+                        <input type='hidden' name='action' value='aceptar' />
+
+                    </div>
+                    
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-sm">
+                                <div class="mt-3">
+                                    <input type="submit" class="btn btn-primary" value="Aceptar" /> 
+                                </div>
+                            </div>
+                            <div class="col-sm">
+                                <div class="mt-3">
+                                    <a class="btn btn-danger" onclick="openModalAdm();">
+                                        Rechazar
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </form>
+
+
+
+            </div>
+    
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+
+const listaEventos = [
+  {
+    type: "2.1",
+    typeName: "Evento Académico (Curso de 40 horas o más de duración)",
+    value: "2.1.1",
+    name: "Por evento",
+    puntos: 4,
+  },
+  {
+    type: "2.2",
+    typeName: "Actividad con duración menor a 40 horas",
+    value: "2.2.1",
+    name: "Por cada actividad académica de 21 a 39 horas de duración",
+    puntos: 3,
+  },
+  {
+    type: "2.2",
+    typeName: "Actividad con duración menor a 40 horas",
+    value: "2.2.2",
+    name: "Por cada actividad académica de 9 a 20 horas de duración",
+    puntos: 2,
+  },
+  {
+    type: "2.2",
+    typeName: "Actividad con duración menor a 40 horas",
+    value: "2.2.3",
+    name: "Por cada actividad académica de 4 a 8 horas de duración",
+    puntos: 1,
+  },
+  {
+    type: "2.2",
+    typeName: "Actividad con duración menor a 40 horas",
+    value: "2.2.4",
+    name: "Por cada actividad o asistencia a charlas académicas menores a 4 horas",
+    puntos: 0.5,
+  },
+  {
+    type: "2.2",
+    typeName: "Actividad con duración menor a 40 horas",
+    value: "2.2.5",
+    name: "Por estudios de otros idiomas, por cada curso.",
+    puntos: 1,
+  },
+];
+
+
+function cargarInfo(data) {
+    
+    document.getElementById("tipo_evento").value = data.tipo_evento;
+
+    let categorias = listaEventos.filter((e) => e.type == data.tipo_evento);
+    const select = document.getElementById("subcategoria");
+    //clearSelect(select);
+    for (const option of categorias) {
+        let newOption = document.createElement("option");
+        newOption.value = option.value;
+        newOption.text = option.name;
+        select.add(newOption);
+    }
+    select.selectedIndex = 0;
+    select.value = data.subcategoria;
+    let valueObject = listaEventos.find((e) => e.value == data.subcategoria);
+    //console.log(valueObject);
+    document.querySelector("#label_pts").innerHTML = valueObject.puntos;
+    document.querySelector("#puntos").value = valueObject.puntos;
+    
+
+}
+
+cargarInfo(<?= json_encode($this->solicitudData[0]) ?>);
+
+</script>

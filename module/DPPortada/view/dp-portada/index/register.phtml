@@ -1,0 +1,75 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ */
+?>
+
+<div class="container">
+
+        <div class="card o-hidden border-0 shadow-lg my-5">
+            <div class="card-body p-0">
+                <!-- Nested Row within Card Body -->
+                <div class="row">
+                    <div class="col-lg-5 d-none d-lg-block bg-register-image"></div>
+                    <div class="col-lg-7">
+                        <div class="p-5">
+                            <div class="text-center">
+                                <h1 class="h4 text-gray-900 mb-4">Crear una cuenta!</h1>
+                            </div>
+                            <form class="user" method="POST">
+                                <div class="form-group row">
+                                    <div class="col-sm-6 mb-3 mb-sm-0">
+                                        <input type="text" class="form-control form-control-user" id="nombre" name="nombre"
+                                            placeholder="Ingrese su nombre completo">
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <input type="email" class="form-control form-control-user" id="email" name="email"
+                                            placeholder="Ingrese su correo electrónico"> 
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <input type="text" class="form-control form-control-user" id="registro_docente" name="registro_docente"
+                                        placeholder="Ingrese su número de registro docente"> 
+                                </div>
+
+                                <div class="form-group">
+                                        <input type="text" class="form-control form-control-user" id="dpi" name="dpi"
+                                            placeholder="Ingrese sus número de DPI">
+                                </div>
+
+                                <div class="form-group">
+                                    <input type="text" class="form-control form-control-user" id="grado_acádemico" name="grado_academico"
+                                    placeholder="Ingrese su grado académico actual">
+
+                                </div>
+                            
+                                <div class="form-group row">
+                                    <div class="col-sm-6 mb-3 mb-sm-0">
+                                        <input type="password" class="form-control form-control-user"
+                                            id="passwd" name="passwd" placeholder="Ingrese su contraseña">
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <input type="password" class="form-control form-control-user"
+                                            id="passwd2" name="passwd2" placeholder="Confirme su contraseña">
+                                    </div>
+                                </div>
+                                
+                                <input class="btn btn-primary btn-user btn-block" type="submit"
+                                    value="Registrar"
+                                />
+                               
+                            </form>
+                            <hr>
+                            <div class="text-center">
+                                <a class="small" href="<?= $this->url('recuperarpass') ?>">¿Has olvidado tu contraseña?</a>
+                            </div>
+                            <div class="text-center">
+                                <a class="small" href="<?= $this->url('home') ?>">¿Ya tienes una cuenta? ¡Ingresar!</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>

@@ -1,0 +1,77 @@
+<?php
+
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+namespace ORM\Model\Entity;
+
+/**
+ * Description of AdminTable
+ *
+ * @author eliel
+ */
+class InvestigacionesTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
+
+    // generar el alias para la tabla: SELECT * FROM user u ...
+    protected $table = "investigaciones";
+    protected $adapter;
+
+    public function __construct($adapter) {
+        $this->adapter = $adapter;
+        if (!$this->isInitialized()) {
+            $this->initialize();
+        }
+    }
+
+    public function getInvestigaciones() {
+        $select = $this->getSql()->select();
+        $select->join(["e" => "estado"], "e.id_estado = investigaciones.id_estado");
+
+        $select->columns(['id_investigacion','institucion', 'titulo_investigacion', 'updated_at', 'url_constancia'])->join(['l' => 'usuario'], 'investigaciones.id_usuario = l.usuario', ['nombre', 'grado_academico']);
+        $data = $this->selectWith($select)->toArray();
+
+        return $data;
+    }
+
+    public function getInvestigacionesByState($state) {
+        $select = $this->getSql()->select();
+        $select->where->equalTo("id_estado", $state);
+        $data = $this->selectWith($select)->toArray();
+
+        return $data;
+    }
+
+    public function getInvestigacionesByUser($id_usuario){
+        $select = $this->getSql()->select();
+        // $select->join(["u" => "usuario_rol"], "u.rol = rol.rol");
+        $select->join(["e" => "estado"], "e.id_estado = investigaciones.id_estado");
+        $select->where->equalTo("id_usuario", $id_usuario);
+        $data = $this->selectWith($select)->toArray();
+
+        return $data;
+    }
+
+    public function getInvestigacionesById($id_usuario, $id_solicitud){
+        $select = $this->getSql()->select();
+        // $select->join(["u" => "usuario_rol"], "u.rol = rol.rol");
+        $select->join(["e" => "estado"], "e.id_estado = investigaciones.id_estado");
+        $select->where->equalTo("id_investigacion", $id_solicitud);
+        $select->where->equalTo("id_usuario", $id_usuario);
+        $data = $this->selectWith($select)->toArray();
+
+        return $data;
+    }
+
+    public function getSolicitud($id_solicitud){
+        $select = $this->getSql()->select();
+        $select->join(["e" => "estado"], "e.id_estado = investigaciones.id_estado");
+        $select->where->equalTo("id_investigacion", $id_solicitud);
+        $data = $this->selectWith($select)->toArray();
+
+        return $data;
+    }
+
+}

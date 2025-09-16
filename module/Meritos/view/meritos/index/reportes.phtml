@@ -1,0 +1,196 @@
+
+<ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+  <li class="nav-item" role="presentation">
+    <button class="nav-link active" id="pills-home-tab" data-bs-toggle="pill" data-bs-target="#pills-r1" type="button" role="tab" aria-controls="pills-r1" aria-selected="true">Reporte 1</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="pills-profile-tab" data-bs-toggle="pill" data-bs-target="#pills-r2" type="button" role="tab" aria-controls="pills-r2" aria-selected="false">Reporte 2</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="pills-contact-tab" data-bs-toggle="pill" data-bs-target="#pills-r3" type="button" role="tab" aria-controls="pills-r3" aria-selected="false" onclick='generarGraph(<?= json_encode($dataR3) ?>);'>Reporte 3</button>
+  </li>
+</ul>
+
+
+<div class="tab-content" id="pills-tabContent">
+
+  <div class="tab-pane fade show active" id="pills-r1" role="tabpanel" aria-labelledby="pills-r1-tab">
+
+        <!-- Inicio tab1 -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Candidatos a promoción docente</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="tableReporte1" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>DPI</th>
+                                <th>Registro docente</th>
+                                <th>Nombre docente</th>
+                                <th>Email</th>
+                                <th>Año</th>
+                                <th>Puntos totales</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($this->dataR1 as $tmp): ?>
+                            <tr>
+                                <td><?= $tmp["dpi"] ?></td>
+                                <td><?= $tmp["registro_docente"] ?></td>
+                                <td><?= $tmp["nombre"] ?></td>
+                                <td><?= $tmp["email"] ?></td>
+                                <td><?= $tmp["year"] ?></td>
+                                <td><?= $tmp["puntos"] ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fin tab1 -->
+
+  </div>
+
+  <div class="tab-pane fade" id="pills-r2" role="tabpanel" aria-labelledby="pills-r2-tab">
+    <!-- Inicio tab2 -->
+    <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Resumen de puntos por categoria</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="tableReporte2" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>DPI</th>
+                                <th>Nombre docente</th>
+                                <th>Premios, menciones honorificas, reconocimientos</th>
+                                <th>Cargos desempeñados</th>
+                                <th>Capacitación profesional</th>
+                                <th>Formación Academica</th>
+                                <th>Investigaciones y/o Publicaciones</th>
+                                <th>Puntos totales</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($this->dataR1 as $tmp): ?>
+                            <tr>
+                                <td><?= $tmp["dpi"] ?></td>
+                                <td><?= $tmp["nombre"] ?></td>
+                                <td><?= $tmp["premios"] ?></td>
+                                <td><?= $tmp["cargos"] ?></td>
+                                <td><?= $tmp["capacitacion_profesional"] ?></td>
+                                <td><?= $tmp["formacion_academica"] ?></td>
+                                <td><?= $tmp["investigaciones"] ?></td>
+                                <td><?= $tmp["puntos"] ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    <!-- Fin tab2 -->
+  </div>
+
+
+  <div class="tab-pane fade" id="pills-r3" role="tabpanel" aria-labelledby="pills-r3-tab">
+    <!-- Inicio reporte3 -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Número de solicitudes rechazadas
+                            </div>
+                            <div class="row no-gutters align-items-center">
+                                <div class="col-auto">
+                                    <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800" id="rechazadas"> <?= $this->contadores["rechazadas"] ?> </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Número de solicitudes aceptadas
+                            </div>
+                            <div class="row no-gutters align-items-center">
+                                <div class="col-auto">
+                                    <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800" id="aceptadas"> <?= $this->contadores["aceptadas"] ?> </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Número de solicitudes pendientes
+                            </div>
+                            <div class="row no-gutters align-items-center">
+                                <div class="col-auto">
+                                    <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800" id="pendientes">  <?= $this->contadores["ingresadas"] ?> </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-comments fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+																																						
+
+    </div>
+
+
+    <!-- Parte 2 reporte 3 -->
+    <div class="row">
+        <div class="col-xl-8 col-lg-7">
+            <!-- Bar Chart -->
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Cantidad de solicitudes por tipo de solicitud</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-bar">
+                        <canvas id="myBarChart"></canvas>
+                    </div>
+                    <!-- <hr> -->
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Fin parte 2 -->
+    <!-- Fin reporte3 -->
+  </div>
+
+</div>
+

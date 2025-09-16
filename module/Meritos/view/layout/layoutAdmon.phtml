@@ -1,0 +1,410 @@
+<html>
+    
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">  
+    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css"/>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.0/font/bootstrap-icons.css">
+
+    <!-- <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.10.7/css/jquery.dataTables.css"/> -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/dataTables.bootstrap5.min.css"/>
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.2.2/css/buttons.dataTables.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.33/moment-timezone-with-data.min.js"></script>
+
+
+    <?=
+            $this->headLink(['rel' => 'shortcut icon', 'type' => 'image/vnd.microsoft.icon', 'href' => $this->basePath() . '/img/favicon.ico'])
+            ->prependStylesheet($this->basePath('css/jqueryui/jquery-ui.theme.min.css'))
+            ->prependStylesheet($this->basePath('css/jqueryui/jquery-ui.structure.min.css'))
+            ->prependStylesheet($this->basePath('css/jqueryui/jquery-ui.min.css'))
+            ->prependStylesheet($this->basePath('css/styles.css'))
+            ->prependStylesheet($this->basePath('css/styleadm.css?c=' . time()))
+    ?>
+
+
+    <script>
+        const contadorTiempoDisponible = (fecha) =>{
+            // Fecha y hora objetivo (Año, Mes [0-11], Día, Hora, Minutos, Segundos)
+            // var fechaObjetivo = new Date('2023-12-31T23:59:59');
+        
+            //var fechaObjetivoUTC = moment.utc(fecha);
+            //console.log(fecha)
+            var fechaObjetivoGuatemala = moment(fecha);
+            //console.log(fechaObjetivoGuatemala);
+
+            // Convertir la fecha y hora objetivo a la zona horaria de Guatemala
+            //var fechaObjetivoGuatemala = fechaObjetivoUTC.clone().tz('America/Guatemala');
+
+            function actualizarContador() {
+                // Obtener la fecha y hora actual en la zona horaria de Guatemala
+                var ahoraGuatemala = moment().tz('America/Guatemala');
+
+                // Calcular la diferencia en milisegundos entre la fecha y hora actual y la fecha y hora objetivo
+                var diferencia = fechaObjetivoGuatemala.diff(ahoraGuatemala);
+
+                // Calcular los días, horas, minutos y segundos restantes
+                var duracion = moment.duration(diferencia);
+                var dias = duracion.days();
+                var horas = duracion.hours();
+                var minutos = duracion.minutes();
+                var segundos = duracion.seconds();
+
+                // Mostrar el contador en el elemento con el id 'contador'
+                document.getElementById('contador').innerHTML = `
+                    <p>TIEMPO DISPONIBLE: ${dias} días, ${horas} horas, ${minutos} minutos, ${segundos} segundos</p>
+                `;
+
+                // Detener el contador cuando se alcanza la fecha objetivo
+                if (diferencia <= 0) {
+                    clearInterval(intervalo);
+                    document.getElementById('contador').innerHTML = '';
+                }
+            }
+
+            // Actualizar el contador cada segundo
+            var intervalo = setInterval(actualizarContador, 1000);
+        }
+    </script>
+
+</head>
+
+<body>
+        
+<!-- Page Wrapper -->
+<div id="wrapper">
+
+<!-- Sidebar -->
+    <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+
+    <!-- Sidebar - Brand -->
+    <a class="sidebar-brand d-flex align-items-center justify-content-center" href="<?= $this->url('home') ?>">
+        <!-- <div class="sidebar-brand-icon rotate-n-15"> -->
+        <div class="">
+            <!-- <i class="fas fa-laugh-wink"></i> -->
+            <img src="<?= $this->basePath('img/icons/logoceda.png') ?>" alt="" width="100px;">
+        </div>
+        <!-- <div class="sidebar-brand-text mx-3">Comeval</div> -->
+    </a>
+
+    
+
+    <!-- Nav Item - Dashboard -->
+    
+
+    <!-- Nav Item - Pages Collapse Menu -->
+
+    
+        <!-- <span class="menu-titulo"><?= $menu ?></span> -->
+        <?php
+        $admin = false;
+        $accesoSolicitudes = false;
+
+        foreach ($this->menuData as $menu => $permisos) {
+            foreach ($permisos as $permiso) {
+                $action = $permiso["action"];
+
+                if ($action === "usuarios") {
+                    $admin = true;
+                }
+                if ($action === "misSolicitudes") {
+                    $accesoSolicitudes = true;
+                }
+            }
+        }
+
+        if (!$admin && $accesoSolicitudes) {
+        ?>
+            <!-- Divider -->
+            <hr class="sidebar-divider my-0">
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="true" aria-controls="collapseTwo">
+                    <i class="fas fa-file"></i>
+                    <span>Méritos Curriculares</span>
+                </a>
+                <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <?php
+                        foreach ($this->menuData as $menu => $permisos) {
+                            foreach ($permisos as $permiso) {
+                                $action = $permiso["action"];
+                                if ($action !== "misSolicitudes") {
+                        ?>
+                                    <a class="collapse-item" href="<?= $this->url($permiso["route"], ["action" => $action]) ?>"><?= $permiso["menu"] ?></a>
+                        <?php
+                                }
+                            }
+                        }
+                        ?>
+                    </div>
+                </div>
+            </li>
+        <?php
+        }
+        ?>
+
+        <!-- Divider -->
+        <hr class="sidebar-divider">
+
+        <!-- Heading -->
+        <div class="sidebar-heading">
+        </div>
+
+        <!-- Nav Item - Charts -->
+        <?php
+        foreach ($this->menuData as $menu => $permisos) {
+            foreach ($permisos as $permiso) {
+                $action = $permiso["action"];
+                if (!in_array($action, ["premios", "investigaciones", "formacionAcademica", "capacitacionProfesional", "cargos"])) {
+        ?>
+                    <li class="nav-item">
+                        <a class="nav-link" href="<?= $this->url($permiso["route"], ["action" => $action]) ?>">
+                            <i class="fa <?= $permiso["icon"] ?>" aria-hidden="true"></i> <span class="align-middle"><?= $permiso["menu"] ?></span>
+                        </a>
+                    </li>
+                    <hr class="sidebar-divider my-0">
+        <?php
+                }
+            }
+        }
+        ?>
+ 
+
+    <!-- Divider -->
+    <hr class="sidebar-divider d-none d-md-block">
+
+    <!-- Sidebar Toggler (Sidebar) -->
+    <div class="text-center d-none d-md-inline">
+        <button class="rounded-circle border-0" id="sidebarToggle"></button>
+    </div>
+
+
+    </ul>
+<!-- End of Sidebar -->
+
+<!-- Content Wrapper -->
+<div id="content-wrapper" class="d-flex flex-column">
+
+<!-- Main Content -->
+<div id="content">
+
+    <!-- Topbar -->
+    <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+
+        <!-- Sidebar Toggle (Topbar) -->
+        <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+            <i class="fa fa-bars"></i>
+        </button>
+
+   
+
+        <!-- Topbar Navbar -->
+        <ul class="navbar-nav ml-auto">
+
+            <!-- Nav Item - Search Dropdown (Visible Only XS) -->
+            <li class="nav-item dropdown no-arrow d-sm-none">
+                <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button"
+                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <i class="fas fa-search fa-fw"></i>
+                </a>
+                <!-- Dropdown - Messages -->
+                <div class="dropdown-menu dropdown-menu-right p-3 shadow animated--grow-in"
+                    aria-labelledby="searchDropdown">
+                    <form class="form-inline mr-auto w-100 navbar-search">
+                        <div class="input-group">
+                            <input type="text" class="form-control bg-light border-0 small"
+                                placeholder="Search for..." aria-label="Search"
+                                aria-describedby="basic-addon2">
+                            <div class="input-group-append">
+                                <button class="btn btn-primary" type="button">
+                                    <i class="fas fa-search fa-sm"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </li>
+
+       
+            <div class="topbar-divider d-none d-sm-block"></div>
+
+            <!-- Nav Item - User Information -->
+            <li class="nav-item dropdown no-arrow">
+                <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
+                    data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <span class="mr-2 d-none d-lg-inline text-gray-600 small"><?= $this->userAuth->getData()["nombre"] ?></span>
+                    <i class="fa fa-user-circle" aria-hidden="true"></i>
+                    <!-- <img class="img-profile rounded-circle"
+                        src="img/undraw_profile.svg"> -->
+                </a>
+                <!-- Dropdown - User Information -->
+                <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
+                    aria-labelledby="userDropdown">
+                    <a class="dropdown-item" href="<?= $this->url("administracionHome/administracion", ["action" => "perfil"]) ?>">
+                        <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
+                        Perfil
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item"  aria-hidden="true" href="<?= $this->url('logout') ?>">
+                        <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
+                        Salir
+                    </a>
+                </div>
+            </li>
+
+        </ul>
+
+    </nav>
+    <!-- End of Topbar -->
+
+    <!-- Begin Page Content -->
+    <div class="container-fluid content-main-wrapper">
+        <?= $this->content ?>
+
+        <?php if ($this->flashMessenger()->hasMessages()): ?>
+            <div class="alert alert-info flash-messenger">
+                <?= $this->flashMessenger()->setAutoEscape(false)->render(); ?>
+            </div>
+        <?php endif; ?>
+        <?php
+        $flash = $this->flashMessenger();
+        $flash->setMessageOpenFormat('<div id = "dialogAlert" title = "" %s>
+                <div class = "container">
+                <div class = "row">
+                <div class = "col-sm-2 div-icon">
+                </div>
+                <div class = "col-sm-10">
+                <p>')
+                ->setMessageCloseString('</p>
+                </div>
+                </div>
+                </div>
+                </div>');
+        echo $flash->renderCurrent('error', array('alert', 'alert-dismissible fade show', 'alert-danger'));
+        echo $flash->renderCurrent('info', array('alert', 'alert-dismissible fade show', 'alert-info'));
+        echo $flash->renderCurrent('default', array('alert', 'alert-dismissible', 'alert-warning'));
+        echo $flash->renderCurrent('success', array('alert', 'alert-success', 'alert-dismissible fade show'));
+        ?>
+
+        <div id="dialog-delete" title="Eliminar"  style="display: none;">
+            <form class="form" method="POST" id="form-dialog-delete">
+                <p>¿Estás seguro que deseas inhabilitar el registro?</p>
+                <div class="form-group">
+                    <button class="btn-danger btn float-start" type="submit">Aceptar</button>
+                    <button class="btn-primary btn float-end" type="button" onclick="$('#dialog-delete').dialog('close');">Cancelar</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="dialog-activate" title="Activar Usuario"  style="display: none;">
+            <form class="form" method="POST" id="form-dialog-activate">
+                <p>¿Estás seguro que deseas activar el usuario?</p>
+                <div class="form-group">
+                    <button class="btn-danger btn float-start" type="submit">Activar</button>
+                    <button class="btn-primary btn float-end" type="button" onclick="$('#dialog-activate').dialog('close');">Cancelar</button>
+                </div>
+            </form>
+        </div>
+
+    </div>
+
+    
+
+
+
+    <!-- /.container-fluid -->
+
+</div>
+<!-- End of Main Content -->
+
+<!-- Footer -->
+<footer class="sticky-footer bg-white">
+    <div class="container my-auto">
+        <div class="copyright text-center my-auto">
+            <span>Copyright &copy; Universidad de San Carlos de Guatemala 2023</span>
+        </div>
+    </div>
+</footer> 
+<!-- End of Footer -->
+
+</div>
+<!-- End of Content Wrapper -->
+
+</div>
+<!-- End of Page Wrapper -->
+
+
+
+        <div id="load-vfx"></div>
+
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+        <?=
+                $this->headScript()
+                ->prependFile($this->basePath('js/script.js?h=2'))
+                ->prependFile($this->basePath('js/jquery-ui.min.js'))
+                ->prependFile($this->basePath('vendor/bootstrap/js/bootstrap.bundle.min.js'))
+                ->prependFile($this->basePath('vendor/jquery-easing/jquery.easing.min.js'))
+                ->prependFile($this->basePath('js/sb-admin-2.min.js'))
+                ->prependFile($this->basePath('js/chart-bar.js'))
+                ->prependFile($this->basePath('vendor/chart.js/Chart.min.js'))
+                // ->prependFile($this->basePath('vendor/datatables/jquery.dataTables.min.js'))
+                // ->prependFile($this->basePath('vendor/datatables/dataTables.bootstrap4.min.js'))
+                // ->prependFile($this->basePath('js/demo/datatables-demo.js'))
+ 
+        ?>
+        <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.2/dist/umd/popper.min.js" integrity="sha384-7+zCNj/IqJ95wo16oMtfsKbZ9ccEh31eOz1HGyDuCQ6wgnyJNSYdrPa03rtR1zdB" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.min.js" integrity="sha384-QJHtvGhmr9XOIpI6YVutG+2QOK9T+ZnN4kzFN1RtK3zEFEIsxhlmWl5/YESvpZ13" crossorigin="anonymous"></script>
+        <script src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
+        <script src="https://cdn.datatables.net/1.12.1/js/dataTables.bootstrap5.min.js"></script>
+
+        <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.2.2/js/dataTables.buttons.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.1.3/jszip.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
+        <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
+        <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.html5.min.js"></script>
+        <script type="text/javascript" src="https://cdn.datatables.net/buttons/2.2.2/js/buttons.print.min.js"></script>
+        <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.2.0/chart.min.js" integrity="sha512-qKyIokLnyh6oSnWsc5h21uwMAQtljqMZZT17CIMXuCQNIfFSFF4tJdMOaJHL9fQdJUANid6OB6DRR0zdHrbWAw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script> -->
+
+
+        <!-- <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js" integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj" crossorigin="anonymous"></script> -->
+
+        <!-- <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js" integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN" crossorigin="anonymous"></script> -->
+        <!-- <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script> -->
+
+
+
+        <script>
+            $(function () {
+                $("#dialogAlert").dialog();
+                $("button.ui-dialog-titlebar-close").removeClass("ui-dialog-titlebar-close ")
+                        .addClass("dialog-btn-close-title")
+                        .html("<i class='fa fa-window-close'></i>");
+                $(".alert-success .div-icon").html("<i class='fa fa-check-square text-success'></i>");
+                $(".alert-danger .div-icon").html("<i class='fa fa-window-close text-danger'></i>");
+            });
+        </script>
+        <script>
+            $(document).ready(() => {
+                setTimeout(() => {
+                    $('#load-vfx').fadeOut('slow');
+                }, 50);
+            });
+        </script>
+
+        <script>
+            if (window.history.replaceState) { // verificamos disponibilidad
+                window.history.replaceState(null, null, window.location.href);
+            }
+        </script>
+
+
+    </body>
+</html>

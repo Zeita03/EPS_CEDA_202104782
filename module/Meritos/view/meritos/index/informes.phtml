@@ -1,0 +1,82 @@
+<div class="container-fluid">
+    <class="col-12">
+        <center><h2>Informes de actividades</h2></center>
+        <h7 id="nota" class="nota">Ponderación de informe:<br></h7>
+        <h7>1. Actividades y metas = 15pts.<br></h7>
+        <h7>2. Objetivos = 10pts.<br></h7>
+        <h7>3. Producto alcanzado = 10pts.<br></h7>
+        <h7>Total = 35pts.<br></h7>
+        <h7>Todo informe debe indicar el nombre del autor y fecha de creación.<br></h7>
+        <h7><br></h7>
+    </div>
+
+    <?php if ($this->acceso[0] == 1): ?>
+        <h3 class="">
+            <button class="btn btn-success" id="btn-agregar">Agregar <i class="fas fa-plus"></i></button>
+        </h3>
+
+        <div id="dialog-add" title="Agregar informe de actividades">
+            <form class="form needs-validation" method="POST" id="form-add-informe" enctype="multipart/form-data" novalidate>
+
+            <div class="form-group">
+                
+                <label for="">Archivo de informe de actividades *</label>
+                <input type="file" class="form-control"  onchange="validarExtension(this)"
+                    id="archivo" name="subir_archivo" required>
+                <div class="invalid-feedback">
+                    Por favor suba su informe
+                </div>
+
+                <input type="hidden" class="form-control" value="<?= $this->data["usuario"]; ?>"
+                                id="id_usuario" name="id_usuario">
+
+                <div class="mt-3">
+                    <button class="btn-success btn pull-left" id="btn-agregar-aceptar" type="submit">Aceptar</button>
+                    <button class="btn-danger btn pull-right" id="btn-agregar-cancel" type="button">Cancelar</button>
+                </div>
+
+            </div>
+            </form>
+        </div>
+
+    <?php endif; ?>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <!-- <h6 class="m-0 font-weight-bold text-primary">Solicitudes de Meritos curriculares</h6> -->
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped dtable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Fecha de creación</th>
+                            <th>Nombre usuario</th>
+                            <th>Archivo informe</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($this->informes as $tmp): ?>
+                            <tr>
+                                <td><?= $tmp["id_informe"] ?></td>
+                                <td><?= $tmp["created_at"] ?></td>
+                                <td><?= $tmp["nombre"] ?></td>
+                                <td>
+                                    <a class="btn btn-primary" href="<?= $this->url("meritosHome/meritos", ["action" => "displayfile" , "val1"=> $tmp['url_informe']]) ?>" target="_blank">
+                                        Informe
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+
+

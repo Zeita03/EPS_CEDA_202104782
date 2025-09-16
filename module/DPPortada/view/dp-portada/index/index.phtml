@@ -1,0 +1,115 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ */
+?>
+<!-- <div class="row mt-5 mb-5">
+    <div class="col-xl-4 offset-xl-4 offset-0 col-12 mt-4">
+        <div class="col-12 tex-center">
+            <img class="login-logo" src="<?= $this->url('home') ?>img/ih_logo.png" alt="Inside Health" />
+        </div> 
+        <form class="form" method="POST" >
+            <div class="col-12">
+                &nbsp;
+                <h2 class="text-center">LOGIN</h2>
+            </div>
+            <div class="col-12">
+                <label for="login-mail">Usuario</label>
+                <input id="login-mail" type="text" name="usuario" class="form-control" placeholder="Ingresa tu email" required autofocus="" />
+            </div>
+            <div class="col-12">
+                <label for="login-passwd">Contraseña</label>
+                <input id="login-passwd" type="password" name="passwd" class="form-control" placeholder="Ingresa tu contraseña" autocomplete="false" required />
+            </div>
+            <div class="col-12">
+                <button class="btn btn-lg btn-primary btn-block mt-2" type="submit">Ingresar</button>
+            </div>
+            <div class="col-12">
+                &nbsp;
+                <p class="text-center"><a href="<?= $this->url('recuperarpass') ?>">¿Has olvidado tu contraseña?</a></p>
+            </div>
+        </form>
+    </div>
+</div> -->
+
+<nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
+    <!-- <h5 class="my-0 mr-md-auto font-weight-normal">COMEVAL</h5> -->
+    <img src="<?= $this->basePath('img/icons/logoceda.png') ?>" alt="" width="100px;">
+
+
+    <!-- Sidebar Toggle (Topbar) -->
+    <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
+        <i class="fa fa-bars"></i>
+    </button>
+    <!-- Topbar Navbar -->
+    <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+            <a class="nav-link" href="<?= $this->url('welcome') ?>">
+                <i class="fas fa-home"></i>
+                <!-- <span>Inicio</span> -->
+            </a>
+        </li>
+        <!-- <div class="topbar-divider d-none d-sm-block"></div> -->
+    </ul>
+
+</nav>
+
+<div class="container">
+
+<!-- Outer Row -->
+<div class="row justify-content-center">
+
+    <div class="col-xl-10 col-lg-12 col-md-9">
+
+        <div class="card o-hidden border-0 shadow-lg my-5">
+            <div class="card-body p-0">
+                <!-- Nested Row within Card Body -->
+                <div class="row">
+                    <div class="col-lg-6 d-none d-lg-block bg-login-image"></div>
+                    <div class="col-lg-6">
+                        <div class="p-5">
+                            <div class="text-center">
+                                <h1 class="h4 text-gray-900 mb-4">¡Bienvenido de vuelta!</h1>
+                            </div>
+                            <form class="user" method="POST" >
+                                <div class="form-group">
+                                    <input type="email" class="form-control form-control-user"
+                                        id="login-mail" aria-describedby="emailHelp"
+                                        name="usuario"
+                                        placeholder="Ingrese su dirección de correo electrónico..."
+                                        required autofocus=""
+                                    >
+                                </div>
+                                <div class="form-group">
+                                    <input type="password" class="form-control form-control-user" name="passwd"
+                                        id="login-passwd" placeholder="Ingrese su contraseña">
+                                </div>
+                                <!-- <div class="form-group">
+                                    <div class="custom-control custom-checkbox small">
+                                        <input type="checkbox" class="custom-control-input" id="customCheck">
+                                        <label class="custom-control-label" for="customCheck">Recordarme</label>
+                                    </div>
+                                </div> -->
+                                <button type="submit" class="btn btn-primary btn-user btn-block">
+                                    Iniciar Sesión
+                                </button>
+
+                            </form>
+                            <hr>
+                            <div class="text-center">
+                                <a class="small" href="<?= $this->url('recuperarpass') ?>">¿Has olvidado tu contraseña?</a>
+                            </div>
+                            <!-- <div class="text-center">
+                                <a class="small" href="<?= $this->url('register') ?>">¡Crea una cuenta!</a>
+                            </div> -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+</div>

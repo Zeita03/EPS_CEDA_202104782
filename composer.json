@@ -1,0 +1,70 @@
+{
+    "name": "laminas/laminas-mvc-skeleton",
+    "description": "Laminas MVC Skeleton Application",
+    "type": "project",
+    "license": "BSD-3-Clause",
+    "keywords": [
+        "laminas",
+        "mvc",
+        "skeleton",
+        "framework"
+    ],
+    "require": {
+        "php": "^7.3",
+        "laminas/laminas-component-installer": "^1.0 || ^2.1",
+        "laminas/laminas-development-mode": "^3.2",
+        "laminas/laminas-mvc": "^3.1.1",
+        "laminas/laminas-cache": "^2.9.0",
+        "laminas/laminas-db": "^2.10.0",
+        "laminas/laminas-mvc-form": "^1.0",
+        "laminas/laminas-json": "^3.1.2",
+        "laminas/laminas-log": "^2.11",
+        "laminas/laminas-mvc-i18n": "^1.1.1",
+        "laminas/laminas-mvc-plugins": "^1.0.1",
+        "laminas/laminas-session": "^2.9.1",
+        "laminas/laminas-di": "^3.1.1",
+        "laminas/laminas-mvc-plugin-flashmessenger": "^1.2",
+        "laminas/laminas-crypt": "^3.3",
+        "laminas/laminas-mail": "^2.15",
+        "spipu/html2pdf": "^5.2",
+        "phpoffice/phpspreadsheet": "^1.19"
+    },
+    "autoload": {
+        "psr-4": {
+            "DPPortada\\": "module/DPPortada/src/",
+            "Auth\\": "module/Auth/src/",
+            "Utilidades\\": "module/Utilidades/src/",
+            "ORM\\": "module/ORM/src/",
+            "Administracion\\": "module/Administracion/src/",
+            "Meritos\\": "module/Meritos/src/"
+            
+        }
+    },
+    "scripts": {
+        "cs-check": "phpcs",
+        "cs-fix": "phpcbf",
+        "development-disable": "laminas-development-mode disable",
+        "development-enable": "laminas-development-mode enable",
+        "development-status": "laminas-development-mode status",
+        "post-create-project-cmd": [
+            "@development-enable",
+            "php bin/update-gitignore.php",
+            "php -r 'if (file_exists(\"bin/remove-package-artifacts.php\")) include \"bin/remove-package-artifacts.php\";'",
+            "php -r 'if (file_exists(\"CHANGELOG.md\")) unlink(\"CHANGELOG.md\");'"
+        ],
+        "serve": "php -S 0.0.0.0:8080 -t public",
+        "test": "phpunit"
+    },
+    "scripts-descriptions": {
+        "cs-check": "Run coding standards checks.",
+        "cs-fix": "Automatically fix coding standard issues.",
+        "development-disable": "Disable development mode.",
+        "development-enable": "Enable development mode.",
+        "development-status": "Detail whether or not the application is in development mode.",
+        "serve": "Start the built-in PHP web server and serve the application.",
+        "test": "Run unit tests."
+    },
+    "require-dev": {
+        "laminas/laminas-developer-tools": "^2.0.1"
+    }
+}

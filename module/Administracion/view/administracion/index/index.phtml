@@ -1,0 +1,29 @@
+<?php
+/**
+ * @var Laminas\View\Renderer\PhpRenderer $this
+ */
+?>
+<div class="row">
+    <div class="col-xl-4 offset-xl-4 offset-0 col-12">
+        <form class="form" method="POST" >
+            <div class="col-12 tex-center">
+                <img class="login-logo" src="<?= $this->url('home') ?>img/cropped-logos_contorno-rellenoblancoFINAL_V2-9.png" alt="Fundación Sobrevivientes" />
+            </div>
+            <div class="col-12">
+                <h2 class="text-center">Administración</h2>
+                <hr />
+            </div>
+            <div class="col-12">
+                <label for="login-mail">Email</label>
+                <input id="login-mail" type="email" name="correo" class="form-control" placeholder="Correo Electrónico" autocomplete="off" required autofocus="" />
+            </div>
+            <div class="col-12">
+                <label for="login-passwd">Contraseña</label>
+                <input id="login-passwd" type="pasnasword" name="passwd" class="form-control" placeholder="Contraseña" autocomplete="off" required />
+            </div>
+            <div class="col-12">
+                <button class="btn btn-lg btn-primary btn-block" type="submit">Ingresar</button>
+            </div>
+        </form>
+    </div>
+</div>

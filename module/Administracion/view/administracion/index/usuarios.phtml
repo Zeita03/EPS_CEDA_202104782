@@ -1,0 +1,141 @@
+<div class="container-fluid">
+    <div class="col-12">
+        <center><h2>Gestión de Usuarios</h2></center>
+    </div>
+
+    <?php if ($this->acceso[0] == 1): ?>
+        <h3 class="">
+            <button class="btn btn-success" id="btn-agregar">Agregar <i class="fas fa-plus"></i></button>
+        </h3>
+
+        <div id="dialog-add" title="Agregar / Actualizar">
+            <form class="form" method="POST" id="form-add">
+
+                <input type="hidden" name="usuario" value="" />
+
+                <label class="label-modal" for="nombre">Nombre *</label>
+                <input type="text" name="nombre" class="form-control" placeholder="Nombre" value="" required />
+
+                <label class="label-modal" for="email">Correo electrónico *</label>
+                <input type="text" name="email" class="form-control" placeholder="Correo electrónico"  value="" required />
+                
+                <label class="label-modal" for="dpi">DPI *</label>
+                <input type="text" name="dpi" class="form-control" placeholder="DPI"  value="" required />
+                
+                <label class="label-modal" for="registro_docente">Registro docente *</label>
+                <input type="text" name="registro_docente" class="form-control" placeholder="Registro docente"  value="" required />
+
+                <label class="label-modal" for="grado_academico">Grado académico *</label>
+                <select class="form-select form-control" aria-label="Default select example" name="grado_academico" id="grado_academico" required>
+                    <option selected disabled value="">Seleccione el grado académico del docente</option>
+                    <option value="Doctorado">Doctorado</option>
+                    <option value="Maestria">Maestria</option>
+                    <option value="Licenciatura">Licenciatura</option>
+                    <option value="nivel_intermedio">Estudios universitarios a nivel intermedio</option>
+                </select>
+
+                <label class="label-modal" for="direccion">Dirección</label>
+                <input type="text" name="direccion" class="form-control" placeholder="Dirección"  value="" />
+
+                <label class="label-modal" for="phone">Teléfono</label>
+                <input type="text" name="phone" class="form-control" placeholder="Número de teléfono"  value="" />
+
+
+                <label class="label-modal" for="passwd">Contraseña</label>
+                <input type="password" name="passwd" class="form-control" placeholder=""  value="" />
+
+                <br />
+                <div class="form-group">
+                    <button class="btn-success btn pull-left" id="btn-agregar-aceptar" type="submit">Aceptar</button>
+                    <button class="btn-danger btn pull-right" id="btn-agregar-cancel" type="button">Cancelar</button>
+                </div>
+            </form>
+        </div>
+
+        <div id="dialog-asignacion-roles" class="dialog-asignacion" title="Actualizar de Roles">
+            <form class="form" method="POST" id="form-add3">
+                <input type="hidden" name="action" value="updateRoles" />
+                <input type="hidden" name="usuario" value="" class="id-asociacion" />
+                <?php
+                if (!empty($this->dataRoles)) {
+                    foreach ($this->dataRoles as $tmp) {
+                        ?>
+                        <div class="row borde-sup-ligero borde-inf-ligero">
+                            <div class="col-1" style="align-self: center;">
+                                <input type="radio" class="" name="role" id="<?= $tmp["rol"] ?>" value="<?= $tmp["rol"] ?>" />
+                                <!-- <input type="radio" class="" name="check[<?= $tmp["rol"] ?>]" /> -->
+                            </div>
+                            <div class="col-11">
+                                <label class="label-modal" for=""><?= $tmp["nombre"] ?> (<?= $tmp["descripcion"] ?>)</label>
+                            </div>
+                        </div>
+                        <?php
+                    }
+                }
+                ?>
+                <br />
+                <div class="form-group">
+                    <button class="btn-success btn pull-left" id="btn-asignar-aceptar2" type="submit">Actualizar</button>
+                    <button class="btn-danger btn pull-right" onclick="$('#dialog-asignacion-roles').dialog('close');" type="button">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    <?php endif; ?>
+
+
+
+
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <!-- <h6 class="m-0 font-weight-bold text-primary">Solicitudes de Meritos curriculares</h6> -->
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped dtable">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Correo electrónico</th>
+                            <th>Nombre usuario</th>
+                            <!-- <th>Estado</th> -->
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($this->data as $tmp): ?>
+                            <tr>
+                                <td><?= $tmp["usuario"] ?></td>
+                                <td><?= $tmp["email"] ?></td>
+                                <td><?= $tmp["nombre"] ?></td>
+                                <!-- <td><?= $tmp["id_estado"] ?></td> -->
+                                <td>
+                                    <?php if ($this->acceso[0] == 1 && $tmp["id_estado"] == 1): ?>
+                                        <!-- <input type="button" class="btn btn-primary btn-sm1" value="Editar" onclick='cargarDialogActualizar(<?= json_encode($tmp) ?>)' />
+                                        <input type="button" class="btn btn-warning btn-sm1" value="Roles" onclick='cargarDialogAsignacionOpciones(<?= json_encode($tmp["roles"]) ?>, "<?= $tmp["usuario"] ?>", "#dialog-asignacion-roles")' /> -->
+
+                                        <button type="button" class="btn btn-primary btn-sm1" onclick='cargarDialogActualizar(<?= json_encode($tmp) ?>)' > <i class="fas fa-edit"></i> </button>
+                                        <button type="button" class="btn btn-warning btn-sm1" onclick='cargarDialogAsignacionOpciones(<?= json_encode($tmp["roles"]) ?>, "<?= $tmp["usuario"] ?>", "#dialog-asignacion-roles")' > <i class="fas fa-user-tag"></i> </button>
+                                    <?php endif; ?>
+                                    <?php if ($this->acceso[1] == 1  && $tmp["id_estado"] == 1): ?>
+                                        <!-- <input type="button" class="btn btn-danger btn-sm1" value="<i class='fas fa-trash'></i>" onclick="dialogEliminar({id: '<?= $tmp["usuario"] ?>'})" /> -->
+                                        <button type="button" class="btn btn-danger btn-sm1"  onclick="dialogEliminar({id: '<?= $tmp["usuario"] ?>'})" > <i class="fas fa-trash"></i></button>
+                                    <?php endif; ?>
+                                    <?php if ($this->acceso[1] == 1  && $tmp["id_estado"] == 0): ?>
+                                        <button type="button" class="btn btn-primary"  onclick="dialogActivateUser({id: '<?= $tmp["usuario"] ?>'})" > Activar </button>
+                                    <?php endif; ?>
+
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+
+

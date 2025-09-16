@@ -1,0 +1,673 @@
+html,
+body {
+    background-image: url("../img/Collage_ARQUITECTURA.jpg");
+   /* background-color: #F7F8FA;
+    color: #0d3056;*/
+}
+
+
+body_collage {
+    background-image: url("../img/Collage_ARQUITECTURAjpg");
+   /* background-color: #F7F8FA;
+    color: #0d3056;*/
+}
+
+a,
+small {
+    display: inline-block;
+    width: 100%;
+}
+
+footer {
+    display: none;
+}
+
+#load-vfx {
+    background-color: white;
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 10000;
+}
+
+
+/*
+    GENERAL
+*/
+
+:root {
+    --brand-color: #013755;
+}
+
+.navbar {
+    background-color: var(--brand-color);
+}
+
+.btn-primary {
+    background-color: #041d3c;
+    border-color: #041d3c;
+    text-transform: uppercase;
+    font-weight: bold;
+}
+
+.btn-primary:hover,
+.btn-primary:active,
+.btn-primary:focus {
+    /* background-color: #b1aaba;
+    border-color: #b1aaba;
+    color: #0d3056; */
+    background-color: #003470;
+    border-color: #003470;
+    color: #FFFFFF;
+}
+
+.estado-ev-navbar {
+    color: white;
+}
+
+.border-separator-bottom {
+    border-bottom: solid;
+    border-bottom-color: lightgray;
+    font-weight: bold;
+}
+
+
+/*  
+    LOGIN
+*/
+.img-login-logo {
+    max-height: 150px;
+}
+
+.logo-menu-bar {
+    max-height: 70px;
+}
+
+.row-seguimiento {
+    min-height: 60px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    padding-right: 20px;
+    border-style: solid;
+    border-color: lightgray;
+}
+
+.bg-color-par {
+    background-color: rgba(0, 0, 0, .05);
+}
+
+.bg-color-impar {
+    background-color: #ffffff;
+
+}
+
+
+.profile-userpic img {
+    float: none;
+    margin: 0 auto;
+    /*
+    -webkit-border-radius: 50% !important;
+    -moz-border-radius: 50% !important;
+    border-radius: 50% !important;
+    */
+}
+
+.profile-user-img {
+    max-height: 150px;
+}
+
+/*Nuevo Style login*/
+.bg-login-image {
+    /* background: url("https://source.unsplash.com/K4mSJ7kc0As/600x800"); */
+    background: url("../img/logoarqui.jpg");
+    /* background-position: center; */
+    background-position: center;
+    background-size: cover;
+}
+
+.bg-register-image {
+    /* background: url("https://source.unsplash.com/Mv9hjnEUHR4/600x800"); */
+    background: url("../img/logoarqui.jpg");
+    background-position: center;
+    background-size: cover;
+}
+
+.bg-password-image {
+    /* background: url("https://source.unsplash.com/oWTW-jNGl9I/600x800"); */
+    background: url("../img/logoarqui.jpg");
+    background-position: center;
+    background-size: cover;
+}
+
+form.user .custom-checkbox.small label {
+    line-height: 1.5rem;
+}
+
+form.user .form-control-user {
+    font-size: 1rem;
+    border-radius: 1.2rem;
+    padding: 1.5rem 1rem;
+    color: #0d3056;
+    font-weight: 500;
+}
+
+form.user .btn-user {
+    font-size: 0.8rem;
+    border-radius: 10rem;
+    padding: 0.75rem 1rem;
+}
+
+form.user {
+    margin: auto;
+}
+
+
+
+
+/*Fin login*/
+
+
+
+
+
+/** The Magic **/
+.btn-breadcrumb .btn:not(:last-child):after {
+    content: " ";
+    display: block;
+    width: 0;
+    height: 0;
+    border-top: 17px solid transparent;
+    border-bottom: 17px solid transparent;
+    border-left: 10px solid white;
+    position: absolute;
+    top: 50%;
+    margin-top: -17px;
+    left: 100%;
+    z-index: 3;
+}
+
+.btn-breadcrumb .btn:not(:last-child):before {
+    content: " ";
+    display: block;
+    width: 0;
+    height: 0;
+    border-top: 17px solid transparent;
+    border-bottom: 17px solid transparent;
+    border-left: 10px solid rgb(173, 173, 173);
+    position: absolute;
+    top: 50%;
+    margin-top: -17px;
+    margin-left: 1px;
+    left: 100%;
+    z-index: 3;
+}
+
+/** The Spacing **/
+.btn-breadcrumb .btn {
+    padding: 6px 12px 6px 24px;
+}
+
+.btn-breadcrumb .btn:first-child {
+    padding: 6px 6px 6px 10px;
+}
+
+.btn-breadcrumb .btn:last-child {
+    padding: 6px 18px 6px 24px;
+}
+
+/** Default button **/
+.btn-breadcrumb .btn.btn-default:not(:last-child):after {
+    border-left: 10px solid #fff;
+}
+
+.btn-breadcrumb .btn.btn-default:not(:last-child):before {
+    border-left: 10px solid #ccc;
+}
+
+.btn-breadcrumb .btn.btn-default:hover:not(:last-child):after {
+    border-left: 10px solid #ebebeb;
+}
+
+.btn-breadcrumb .btn.btn-default:hover:not(:last-child):before {
+    border-left: 10px solid #adadad;
+}
+
+/** Primary button **/
+.btn-breadcrumb .btn.btn-primary:not(:last-child):after {
+    border-left: 10px solid #428bca;
+}
+
+.btn-breadcrumb .btn.btn-primary:not(:last-child):before {
+    border-left: 10px solid #357ebd;
+}
+
+.btn-breadcrumb .btn.btn-primary:hover:not(:last-child):after {
+    border-left: 10px solid #3276b1;
+}
+
+.btn-breadcrumb .btn.btn-primary:hover:not(:last-child):before {
+    border-left: 10px solid #285e8e;
+}
+
+/** Success button **/
+.btn-breadcrumb .btn.btn-success:not(:last-child):after {
+    border-left: 10px solid #5cb85c;
+}
+
+.btn-breadcrumb .btn.btn-success:not(:last-child):before {
+    border-left: 10px solid #4cae4c;
+}
+
+.btn-breadcrumb .btn.btn-success:hover:not(:last-child):after {
+    border-left: 10px solid #47a447;
+}
+
+.btn-breadcrumb .btn.btn-success:hover:not(:last-child):before {
+    border-left: 10px solid #398439;
+}
+
+/** Danger button **/
+.btn-breadcrumb .btn.btn-danger:not(:last-child):after {
+    border-left: 10px solid #d9534f;
+}
+
+.btn-breadcrumb .btn.btn-danger:not(:last-child):before {
+    border-left: 10px solid #d43f3a;
+}
+
+.btn-breadcrumb .btn.btn-danger:hover:not(:last-child):after {
+    border-left: 10px solid #d2322d;
+}
+
+.btn-breadcrumb .btn.btn-danger:hover:not(:last-child):before {
+    border-left: 10px solid #ac2925;
+}
+
+/** Warning button **/
+.btn-breadcrumb .btn.btn-warning:not(:last-child):after {
+    border-left: 10px solid #f0ad4e;
+}
+
+.btn-breadcrumb .btn.btn-warning:not(:last-child):before {
+    border-left: 10px solid #eea236;
+}
+
+.btn-breadcrumb .btn.btn-warning:hover:not(:last-child):after {
+    border-left: 10px solid #ed9c28;
+}
+
+.btn-breadcrumb .btn.btn-warning:hover:not(:last-child):before {
+    border-left: 10px solid #d58512;
+}
+
+/** Info button **/
+.btn-breadcrumb .btn.btn-info:not(:last-child):after {
+    border-left: 10px solid #5bc0de;
+}
+
+.btn-breadcrumb .btn.btn-info:not(:last-child):before {
+    border-left: 10px solid #46b8da;
+}
+
+.btn-breadcrumb .btn.btn-info:hover:not(:last-child):after {
+    border-left: 10px solid #39b3d7;
+}
+
+.btn-breadcrumb .btn.btn-info:hover:not(:last-child):before {
+    border-left: 10px solid #269abc;
+}
+
+
+.modal.modal-fullscreen {
+    /* Maximize the main wrappers on the screen */
+    /* Make the parent wrapper of the modal box a full-width block */
+    /* Remove borders and effects on the content */
+    /**
+           * /!\ By using this feature, you force the header and footer to be placed
+           * in an absolute position. You must handle by yourself the margin of the
+           * content.
+           */
+}
+
+.modal.modal-fullscreen .modal-dialog,
+.modal.modal-fullscreen .modal-content {
+    bottom: 0;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+}
+
+.modal.modal-fullscreen .modal-dialog {
+    margin: 10;
+    animation-duration: 0.6s;
+}
+
+.modal.modal-fullscreen .modal-content {
+    border: none;
+    -moz-border-radius: 0;
+    border-radius: 0;
+    -webkit-box-shadow: inherit;
+    -moz-box-shadow: inherit;
+    -o-box-shadow: inherit;
+    box-shadow: inherit;
+    /* change bg color below */
+    /* background:#1abc9c; */
+}
+
+.modal.modal-fullscreen.force-fullscreen {
+    /* Remove the padding inside the body */
+}
+
+.modal.modal-fullscreen.force-fullscreen .modal-body {
+    padding: 0;
+}
+
+.modal.modal-fullscreen.force-fullscreen .modal-header,
+.modal.modal-fullscreen.force-fullscreen .modal-footer {
+    position: absolute;
+    bottom: 0;
+}
+
+.modal.modal-fullscreen.force-fullscreen .modal-header {
+    top: 0;
+}
+
+/* The styles above for the modal-body, footer, etc aren't being applied so I tried the ones below and they work */
+.modal-body {
+    height: 100%;
+}
+
+.modal-footer {
+    width: 100%;
+    position: absolute;
+    bottom: 0;
+    background-color: #FFF;
+}
+
+
+.tip {
+    width: 0px;
+    height: 0px;
+    position: absolute;
+    background: transparent;
+    border: 10px solid #ccc;
+}
+
+.tip-up {
+    top: -25px;
+    /* Same as body margin top + border */
+    left: 10px;
+    border-right-color: transparent;
+    border-left-color: transparent;
+    border-top-color: transparent;
+}
+
+.tip-down {
+    bottom: -25px;
+    left: 10px;
+    border-right-color: transparent;
+    border-left-color: transparent;
+    border-bottom-color: transparent;
+}
+
+.tip-left {
+    top: 10px;
+    left: -25px;
+    border-top-color: transparent;
+    border-left-color: transparent;
+    border-bottom-color: transparent;
+}
+
+.tip-right {
+    top: 10px;
+    right: -25px;
+    border-top-color: transparent;
+    border-right-color: transparent;
+    border-bottom-color: transparent;
+}
+
+.dialogbox .body {
+    position: relative;
+    max-width: 300px;
+    height: auto;
+    margin: 20px 10px;
+    padding: 5px;
+    background-color: #DADADA;
+    border-radius: 3px;
+    border: 5px solid #ccc;
+}
+
+.body .message {
+    min-height: 30px;
+    border-radius: 3px;
+    font-family: Arial;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #797979;
+}
+
+
+/*
+SPINNER DE CARGA...
+*/
+
+.loader {
+    border: 16px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 16px solid blue;
+    width: 70px;
+    height: 70px;
+    -webkit-animation: spin 1.3s linear infinite;
+    /* Safari */
+    animation: spin 1.3s linear infinite;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    padding: 2px;
+    z-index: 101;
+}
+
+/* Safari */
+@-webkit-keyframes spin {
+    0% {
+        -webkit-transform: rotate(0deg);
+    }
+
+    100% {
+        -webkit-transform: rotate(360deg);
+    }
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.ui-widget-overlay {
+    background: black;
+    opacity: 0.5;
+    filter: Alpha(Opacity=.3);
+}
+
+
+/*
+ESTILO DENTADURA...
+*/
+
+.dentadura-row1 {
+    display: inline-block;
+    border-right-width: medium;
+    border-right-style: dashed;
+    border-bottom-width: medium;
+    border-bottom-style: dashed;
+    padding-right: 8px;
+}
+
+.dentadura-row2 {
+    display: inline-block;
+    /* border-left-width: medium; 
+    border-left-style: dashed; */
+    border-bottom-width: medium;
+    border-bottom-style: dashed;
+    padding-left: 2px;
+}
+
+.dentadura-row3 {
+    display: inline-block;
+    border-right-width: medium;
+    border-right-style: dashed;
+    /*border-top-width: medium; 
+    border-top-style: dashed; */
+    padding-right: 8px;
+}
+
+.dentadura-row4 {
+    display: inline-block;
+    /*border-left-width: medium; 
+    border-left-style: dashed; 
+    border-top-width: medium; 
+    border-top-style: dashed; */
+    padding-left: 2px;
+}
+
+.dentadura-col {
+    max-width: 30px;
+    display: inline-block;
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+
+/*
+SOBREESCRITURA DE COLORES PARA BOTONES...
+*/
+
+.btn-expand {
+    height: 100%;
+    width: 100%;
+}
+
+.navbar-dark {
+    background-color: #93BAC0;
+}
+
+.btn-breadcrumb .btn.btn-warning:not(:last-child):after {
+    border-left: 10px solid #000F2B;
+}
+
+.btn-breadcrumb .btn.btn-warning:not(:last-child):before {
+    border-left: 10px solid #000F2B;
+}
+
+.btn-breadcrumb .btn.btn-warning:hover:not(:last-child):before {
+    border-left: 10px solid #000F2B;
+}
+
+.btn-breadcrumb .btn.btn-warning:hover:not(:last-child):after {
+    border-left: 10px solid #000F2B;
+}
+
+.text-primary-b {
+    color: #93BAC0 !important;
+    font-weight: bold;
+}
+
+.alert-success {
+    color: white;
+    background-color: #93BAC0 !important;
+    border-color: #93BAC0 !important;
+}
+
+.ui-dialog.ui-widget-content {
+    background-color: #93BAC0 !important;
+}
+
+.ui-widget-header {
+    background-color: #93BAC0 !important;
+    border: 0;
+}
+
+.dialog-btn-close-title {
+    position: absolute;
+    right: .3em;
+    top: 50%;
+    width: 20px;
+    margin: -10px 0 0 0;
+    padding: 1px;
+    height: 20px;
+    border-width: 0 !important;
+    background-color: transparent;
+}
+
+.ui-dialog .alert {
+    padding: 0 !important;
+}
+
+.alert-success p {
+    color: green;
+    font-weight: bold;
+}
+
+.alert-danger p {
+    color: red;
+    font-weight: bold;
+}
+
+.alert .div-icon i {
+    font-size: 45px;
+}
+
+label {
+    display: inline-block;
+    margin-bottom: .1rem;
+}
+
+.bg-light {
+    background-color: white !important;
+}
+
+.dtable {
+    font-size: 12px;
+}
+
+.img-f {
+    width: 100%;
+    height: 240px;
+    max-height: 240px;
+    object-fit: contain;
+    object-position: center;
+}
+
+input {
+    margin-bottom: 15px;
+}
+
+.login-logo,
+img-responsive {
+    margin-bottom: 30px;
+    width: 100%;
+    max-width: 100%;
+}
+
+label {
+    font-weight: bold;
+}
+
+.text-center {
+    text-align: center;
+}
+
+
+
+
+
+
+/*==========================================================*/

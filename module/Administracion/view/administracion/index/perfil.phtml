@@ -1,0 +1,129 @@
+<div class="row">
+    <div class="">
+        <div class="card flex-fill">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Perfil personal</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="user">
+
+                    <h4>Datos generales</h4>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label class="form-label" for="nombre">Nombre completo</label>
+                            <!-- <input type="text" class="form-control form-control-user" id="institution" name="institucion"
+                                placeholder="Nombre" required> -->
+                            <input type="text" class="form-control form-control-user" name="nombre" value="<?= $this->data["nombre"]; ?>" required />
+
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="email">Correo electrónico</label>
+                            <input type="email" class="form-control form-control-user" name="email" value="<?= $this->data["email"]; ?>" required />
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label class="form-label" for="nombre">DPI</label>
+                            <input type="number" class="form-control form-control-user" name="dpi" value="<?= $this->data["dpi"]; ?>" />
+
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="email">No. Registro docente</label>
+                            <input type="text" class="form-control form-control-user" name="registro_docente" value="<?= $this->data["registro_docente"]; ?>"  />
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label class="form-label" for="nombre">Dirección</label>
+                            <input type="text" class="form-control form-control-user" name="direccion" value="<?= $this->data["direccion"]; ?>" />
+
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="email">Teléfono</label>
+                            <input type="number" class="form-control form-control-user" name="phone" value="<?= $this->data["phone"]; ?>"  />
+                        </div>
+                    </div>
+
+
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label class="form-label" for="nombre">Grado académico</label>
+                            <input type="text" placeholder="Ingrese su grado académico" class="form-control form-control-user" name="grado_academico" value="<?= $this->data["grado_academico"]; ?>" required/>
+
+                        </div>
+                        
+                    </div>
+
+
+                    <h4>Seguridad</h4>
+                    <div class="form-group row">
+                        <div class="col-sm-6 mb-3 mb-sm-0">
+                            <label class="form-label" for="nombre">Contraseña</label>
+                            <input type="password" class="form-control form-control-user" name="passwd" value="" />
+
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="email">Confirmar Contraseña</label>
+                            <input type="password" class="form-control form-control-user" name="passwd2" value="" />
+                        </div>
+                    </div>
+
+                    
+
+
+
+                    <!-- <div class="row mt-1">
+                        <div class="col-6">Nombre:</div>
+                        <div class="col-6">
+                            <input type="text" class="form-control form-control-user" name="nombre" value="<?= $this->data["nombre"]; ?>" required />
+                        </div>
+                    </div>
+                    <div class="row mt-1">
+                        <div class="col-6">Email:</div>
+                        <div class="col-6">
+                            <input type="email" class="form-control form-control-user" name="email" value="<?= $this->data["email"]; ?>" required />
+                        </div>
+                    </div>
+                    <div class="row mt-1">
+                        <div class="col-6">DPI:</div>
+                        <div class="col-6">
+                            <input type="number" class="form-control form-control-user" name="dpi" value="<?= $this->data["dpi"]; ?>" />
+                        </div>
+                    </div>
+                    <div class="row mt-1">
+                        <div class="col-6">Registro Docente:</div>
+                        <div class="col-6">
+                            <input type="text" class="form-control form-control-user" name="registro_docente" value="<?= $this->data["registro_docente"]; ?>"  />
+                        </div>
+                    </div>
+                    <div class="row mt-1">
+                        <div class="col-6">Grado académico:</div>
+                        <div class="col-6">
+                            <input type="text" class="form-control form-control-user" name="grado_academico" value="<?= $this->data["grado_academico"]; ?>"  />
+                        </div>
+                    </div>
+                    <div class="row mt-1">
+                        <div class="col-6">Contraseña:</div>
+                        <div class="col-6">
+                            <input type="password" class="form-control form-control-user" name="passwd" value="" />
+                        </div>
+                    </div>
+                    <div class="row mt-1">
+                        <div class="col-6">Confirmar Contraseña:</div>
+                        <div class="col-6">
+                            <input type="password" class="form-control form-control-user" name="passwd2" value="" />
+                        </div>
+                    </div> -->
+                    <div class="row mt-3">
+                        <div class="col-4 offset-4">
+                            <input type="submit" class="btn btn-primary btn-user" value="Guardar Cambios" /> 
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
