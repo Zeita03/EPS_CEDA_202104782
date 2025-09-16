@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # laminas-mvc-skeleton
 
 ## Introduction
@@ -241,3 +242,7 @@ $ composer cs-fix
 # Run PHPUnit tests:
 $ composer test
 ```
+=======
+# EPS_CEDA_202104782
+Proyecto de Ejercicio Profesional Supervisado (EPS), de Mejoras y Optimizaciones para el portal de la Comisión de Evaluación Docente de la Facultad de Arquitectura de la Universidad de San Carlos de Guatemala
+>>>>>>> 3b218b5c7ac83d0323c02d5dd1a8062d61131d34
