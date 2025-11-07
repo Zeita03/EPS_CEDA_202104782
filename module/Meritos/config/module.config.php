@@ -31,8 +31,7 @@ return [
                         'options' => [
                             'route' => '/admon/:action[/:val1][/:val2]',
                             'constraints' => [
-                                'controller' => '[a-zA-Z][a-zA-Z]*',
-                                'action' => '[a-zA-Z][a-zA-Z]*',
+                                'action' => '[a-zA-Z][a-zA-Z0-9_-]*',
                                 'val1' => '[a-zA-Z0-9]([a-zA-Z0-9_-]|(%20)|\.)*',
                                 'val2' => '[a-zA-Z0-9]([a-zA-Z0-9_-]|(%20)|\.)*',
                             ],

@@ -121,6 +121,7 @@
             }
         }
 
+        // MENÚ PARA DOCENTES (Méritos Curriculares)
         if (!$admin && $accesoSolicitudes) {
         ?>
             <!-- Divider -->
@@ -149,6 +150,42 @@
             </li>
         <?php
         }
+
+        // MENÚ PARA ADMINISTRADORES
+        if ($admin) { ?>
+            <!-- Divider -->
+            <hr class="sidebar-divider my-0">
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseSolicitudes" aria-expanded="true" aria-controls="collapseSolicitudes">
+                    <i class="fas fa-tasks"></i>
+                    <span>Solicitudes</span>
+                </a>
+                <div id="collapseSolicitudes" class="collapse" aria-labelledby="headingSolicitudes" data-parent="#accordionSidebar">
+                    <div class="bg-white py-2 collapse-inner rounded">
+                        <h6 class="collapse-header">Por categoría:</h6>
+                        <a class="collapse-item" href="<?= $this->url('meritosHome/meritos', ['action' => 'solicitudes', 'val1' => 'todas']) ?>">
+                            <i class="fas fa-list"></i> Todas las solicitudes
+                        </a>
+                        <a class="collapse-item" href="<?= $this->url('meritosHome/meritos', ['action' => 'solicitudes', 'val1' => 'premios']) ?>">
+                            <i class="fas fa-trophy"></i> Premios
+                        </a>
+                        <a class="collapse-item" href="<?= $this->url('meritosHome/meritos', ['action' => 'solicitudes', 'val1' => 'investigaciones']) ?>">
+                            <i class="fas fa-flask"></i> Investigaciones
+                        </a>
+                        <a class="collapse-item" href="<?= $this->url('meritosHome/meritos', ['action' => 'solicitudes', 'val1' => 'formacion']) ?>">
+                            <i class="fas fa-graduation-cap"></i> Formación Académica
+                        </a>
+                        <a class="collapse-item" href="<?= $this->url('meritosHome/meritos', ['action' => 'solicitudes', 'val1' => 'cargos']) ?>">
+                            <i class="fas fa-briefcase"></i> Cargos
+                        </a>
+                        <a class="collapse-item" href="<?= $this->url('meritosHome/meritos', ['action' => 'solicitudes', 'val1' => 'capacitacion']) ?>">
+                            <i class="fas fa-chalkboard-teacher"></i> Capacitación
+                        </a>
+                    </div>
+                </div>
+            </li>
+        <?php
+        }
         ?>
 
         <!-- Divider -->
@@ -163,7 +200,7 @@
         foreach ($this->menuData as $menu => $permisos) {
             foreach ($permisos as $permiso) {
                 $action = $permiso["action"];
-                if (!in_array($action, ["premios", "investigaciones", "formacionAcademica", "capacitacionProfesional", "cargos"])) {
+                if (!in_array($action, ["premios", "investigaciones", "formacionAcademica", "capacitacionProfesional", "cargos", "misSolicitudes"]) && !($admin && $action === "solicitudes")) {
         ?>
                     <li class="nav-item">
                         <a class="nav-link" href="<?= $this->url($permiso["route"], ["action" => $action]) ?>">

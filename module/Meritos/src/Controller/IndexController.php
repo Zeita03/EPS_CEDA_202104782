@@ -921,24 +921,51 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
-        //Obtenemos la lista de solicitudes 
-        $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
-        $premios = $premiosTable->getPremios();
+        // Obtener filtro de categoría de la URL
+        $categoriaFiltro = $this->params()->fromRoute('val1', 'todas'); 
 
-        $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
-        $cargos = $cargosTable->getCargos();
+        // Inicializar arrays vacíos
+        $premios = [];
+        $cargos = [];
+        $capacitacionList = [];
+        $formacionList = [];
+        $investigaciones = [];
 
-        $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
-        $capacitacionList = $capacitacionTable->getCapacitacionProfesional();
-        
-        $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
-        $formacionList = $formacionTable->getFormacionAcademica();
-        
-        $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
-        $investigaciones = $investigacionesTable->getInvestigaciones();
+        // Obtener TODOS los datos según el filtro de categoría (sin filtro por estado)
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'premios') {
+            $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
+            $premios = $premiosTable->getPremios();
+        }
 
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'cargos') {
+            $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
+            $cargos = $cargosTable->getCargos();
+        }
 
-        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "premios"=> $premios, "cargos"=>$cargos, "capacitacion"=>$capacitacionList, "formacion"=> $formacionList, "investigaciones"=>$investigaciones]);
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'capacitacion') {
+            $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
+            $capacitacionList = $capacitacionTable->getCapacitacionProfesional();
+        }
+
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'formacion') {
+            $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
+            $formacionList = $formacionTable->getFormacionAcademica();
+        }
+
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'investigaciones') {
+            $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
+            $investigaciones = $investigacionesTable->getInvestigaciones();
+        }
+
+        return new ViewModel([
+            "data" => $this->authService->getIdentity()->getData(), 
+            "premios" => $premios, 
+            "cargos" => $cargos, 
+            "capacitacion" => $capacitacionList, 
+            "formacion" => $formacionList, 
+            "investigaciones" => $investigaciones,
+            "categoriaActual" => $categoriaFiltro
+        ]);
     }
 
 
