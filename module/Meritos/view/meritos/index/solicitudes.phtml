@@ -1,7 +1,21 @@
 <div class="container-fluid">
 
     <!-- Page Heading -->
-    <h1 class="h3 mb-2 text-gray-800">Solicitudes</h1>
+    <h1 class="h3 mb-2 text-gray-800">
+        Solicitudes
+        <?php 
+        $titulos = [
+            'todas' => 'de Méritos Curriculares',
+            'premios' => '- Premios y Reconocimientos',
+            'investigaciones' => '- Investigaciones y Publicaciones',
+            'formacion' => '- Formación Académica',
+            'cargos' => '- Cargos Desempeñados',
+            'capacitacion' => '- Capacitación Profesional'
+        ];
+        $categoriaActual = isset($this->categoriaActual) ? $this->categoriaActual : 'todas';
+        echo $titulos[$categoriaActual] ?? 'de Méritos Curriculares';
+        ?>
+    </h1>
 
     <div class="modal fade" id="modalPdf" tabindex="-1" aria-labelledby="modalPdf" aria-hidden="true">
             <div class="modal-dialog modal-lg">
@@ -26,7 +40,30 @@
     <!-- DataTales Example -->
     <div class="card shadow mb-4">
         <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Solicitudes de Meritos curriculares</h6>
+            <div class="row align-items-center">
+                <div class="col">
+                    <h6 class="m-0 font-weight-bold text-primary">Solicitudes de Meritos curriculares</h6>
+                </div>
+                <div class="col-auto">
+                    <div class="small text-muted">
+                        <?php
+                        // Contar por estados
+                        $contadores = ['Ingresada' => 0, 'Aceptada' => 0, 'Rechazada' => 0];
+                        
+                        foreach ([$this->premios, $this->cargos, $this->formacion, $this->capacitacion, $this->investigaciones] as $categoria) {
+                            foreach ($categoria as $item) {
+                                if (isset($contadores[$item['nombre_estado']])) {
+                                    $contadores[$item['nombre_estado']]++;
+                                }
+                            }
+                        }
+                        ?>
+                        <span class="badge badge-warning me-1">Ingresadas: <?= $contadores['Ingresada'] ?></span>
+                        <span class="badge badge-success me-1">Aceptadas: <?= $contadores['Aceptada'] ?></span> 
+                        <span class="badge badge-danger">Rechazadas: <?= $contadores['Rechazada'] ?></span>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
