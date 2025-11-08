@@ -200,7 +200,7 @@
         foreach ($this->menuData as $menu => $permisos) {
             foreach ($permisos as $permiso) {
                 $action = $permiso["action"];
-                if (!in_array($action, ["premios", "investigaciones", "formacionAcademica", "capacitacionProfesional", "cargos", "misSolicitudes"]) && !($admin && $action === "solicitudes")) {
+                if (!in_array($action, ["premios", "investigaciones", "formacionAcademica", "capacitacionProfesional", "cargos"]) && !($admin && $action === "solicitudes")) {
         ?>
                     <li class="nav-item">
                         <a class="nav-link" href="<?= $this->url($permiso["route"], ["action" => $action]) ?>">
