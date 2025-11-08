@@ -31,7 +31,6 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeModal()">Cerrar</button>
-
                     </div>
                 </div>
             </div>
@@ -58,7 +57,7 @@
                             }
                         }
                         ?>
-                        <span class="badge badge-warning me-1">Ingresadas: <?= $contadores['Ingresada'] ?></span>
+                        <span class="badge badge-info me-1">Ingresadas: <?= $contadores['Ingresada'] ?></span>
                         <span class="badge badge-success me-1">Aceptadas: <?= $contadores['Aceptada'] ?></span> 
                         <span class="badge badge-danger">Rechazadas: <?= $contadores['Rechazada'] ?></span>
                     </div>
@@ -66,8 +65,25 @@
             </div>
         </div>
         <div class="card-body">
+            <!-- FILTRO POR ESTADO CON BOTÓN BUSCAR -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label for="estadoFilter" class="form-label">Filtrar por estado:</label>
+                    <select id="estadoFilter" class="form-control">
+                        <option value="Ingresada" selected>Ingresadas</option>
+                        <option value="Aceptada">Aceptadas</option>
+                        <option value="Rechazada">Rechazadas</option>
+                        <option value="">Todos los estados</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" id="btnBuscar" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+            </div>
+            
             <div class="table-responsive">
-                <!-- <table class="table table-bordered dtable" id="dataTable" width="100%" cellspacing="0"> -->
                 <table class="table table-striped dtable" id="dataTable" width="100%" cellspacing="0">
                     <thead>
                         <tr>
@@ -92,9 +108,9 @@
                                         Constancia
                                     </a>
                                 </td>
-                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
+                                <td><span class="badge badge-<?= $tmp["color"] ?>"><?= $tmp["nombre_estado"] ?></span></td>
                                 <td>
-                                    <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
+                                    <?php if ($tmp["nombre_estado"] == 'Ingresada'): ?>
                                         <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admPremios" , "val1"=> "edit", "val2"=>$tmp["id_premio"]]) ?>">
                                             <i class="fas fa-edit"></i>
                                         </a>
@@ -113,9 +129,9 @@
                                         Constancia
                                     </a>
                                 </td>
-                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
+                                <td><span class="badge badge-<?= $tmp["color"] ?>"><?= $tmp["nombre_estado"] ?></span></td>
                                 <td>
-                                    <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
+                                    <?php if ($tmp["nombre_estado"] == 'Ingresada'): ?>
                                         <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admCargos" , "val1"=> "edit", "val2"=>$tmp["id_cargo"]]) ?>">
                                             <i class="fas fa-edit"></i>
                                         </a>
@@ -134,9 +150,9 @@
                                         Constancia
                                     </a>
                                 </td>
-                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
+                                <td><span class="badge badge-<?= $tmp["color"] ?>"><?= $tmp["nombre_estado"] ?></span></td>
                                 <td>
-                                    <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
+                                    <?php if ($tmp["nombre_estado"] == 'Ingresada'): ?>
                                         <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admFormacionAcademica" , "val1"=> "edit", "val2"=>$tmp["id_formacion_academica"]]) ?>">
                                             <i class="fas fa-edit"></i>
                                         </a>
@@ -156,14 +172,13 @@
                                         Constancia
                                     </a>
                                 </td>
-                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
+                                <td><span class="badge badge-<?= $tmp["color"] ?>"><?= $tmp["nombre_estado"] ?></span></td>
                                 <td>
-                                     <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
+                                     <?php if ($tmp["nombre_estado"] == 'Ingresada'): ?>
                                         <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admCapacitacionProfesional" , "val1"=> "edit", "val2"=>$tmp["id_capacitacion"]]) ?>">
                                             <i class="fas fa-edit"></i>
                                         </a>
                                     <?php endif; ?>
-                                    
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -178,9 +193,9 @@
                                         Constancia
                                     </a>
                                 </td>
-                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
+                                <td><span class="badge badge-<?= $tmp["color"] ?>"><?= $tmp["nombre_estado"] ?></span></td>
                                 <td>
-                                    <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
+                                    <?php if ($tmp["nombre_estado"] == 'Ingresada'): ?>
                                         <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admInvestigaciones" , "val1"=> "edit", "val2"=>$tmp["id_investigacion"]]) ?>">
                                             <i class="fas fa-edit"></i>
                                         </a>
@@ -188,7 +203,6 @@
                                 </td>
                             </tr>
                         <?php endforeach; ?>
-
                     </tbody>
                 </table>
             </div>
@@ -196,3 +210,96 @@
     </div>
 
 </div>
+
+<?php
+$this->headScript()->appendScript('
+    $(document).ready(function() {
+
+        // Verificar si hay filas en el HTML ANTES de inicializar DataTable
+        var filasEnHTML = $("#dataTable tbody tr").length;
+        var table;
+
+        // Si DataTable ya existe, obtener la instancia SIN destruir
+        if ($.fn.DataTable.isDataTable("#dataTable")) {
+            table = $("#dataTable").DataTable();
+            
+            // Verificar datos en la instancia existente
+            if (table.rows().count() === 0) {
+                // Si la instancia está vacía, destruir y recrear
+                table.destroy();
+                
+                // Recrear DataTable
+                table = $("#dataTable").DataTable({
+                    "language": { 
+                        "url": "//cdn.datatables.net/plug-ins/1.12.1/i18n/es-ES.json" 
+                    },
+                    "order": [[1, "asc"], [0, "desc"]],
+                    "pageLength": 25,
+                    "destroy": true,
+                    "responsive": true
+                });
+            }
+        } else {
+            // Crear nueva instancia
+            table = $("#dataTable").DataTable({
+                "language": { 
+                    "url": "//cdn.datatables.net/plug-ins/1.12.1/i18n/es-ES.json" 
+                },
+                "order": [[1, "asc"], [0, "desc"]],
+                "pageLength": 25,
+                "destroy": true,
+                "responsive": true
+            });
+        }
+
+        // Verificar estado final
+        if (table.rows().count() > 0) {
+            // Verificar contenido de la columna de estado
+            var estadosUnicos = [];
+            table.column(5).data().each(function(value) {
+                var estadoLimpio = $(value).text().trim();
+                if (estadosUnicos.indexOf(estadoLimpio) === -1) {
+                    estadosUnicos.push(estadoLimpio);
+                }
+            });
+            
+            
+            // Aplicar filtro inicial para mostrar solo "Ingresada"
+            table.column(5).search("Ingresada", false, false).draw();
+                    
+            // Event listener para el botón Buscar
+            $("#btnBuscar").off("click").on("click", function () {
+                var estadoSeleccionado = $("#estadoFilter").val();
+                
+                // Limpiar filtros anteriores
+                table.search("").columns().search("").draw();
+                
+                // Aplicar nuevo filtro si hay selección
+                if (estadoSeleccionado) {
+                    table.column(5).search(estadoSeleccionado, false, false);
+                }
+                
+                // Ordenar según el filtro aplicado
+                if (estadoSeleccionado === "Ingresada") {
+                    table.order([[1, "asc"], [0, "desc"]]).draw();
+                } else {
+                    table.order([[0, "desc"]]).draw();
+                }
+            });
+
+            $("#estadoFilter").off("keypress").on("keypress", function(e) {
+                if (e.which === 13) {
+                    $("#btnBuscar").click();
+                }
+            });
+        } else {
+            console.warn("No se pudo inicializar la tabla con datos");
+            $("#dataTable tbody").html("<tr><td colspan=\"7\" class=\"text-center\">No hay solicitudes para mostrar</td></tr>");
+        }
+    });
+
+    function closeModal() {
+        $("#modalPdf").modal("hide");
+    }
+    ');
+?>
