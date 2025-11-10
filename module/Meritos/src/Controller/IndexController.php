@@ -1309,7 +1309,47 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $formacionTable->getSolicitud($id_solicitud);
-        //var_dump($solicitud);
+
+        // NUEVO: Manejar edición de estado
+        if ($this->params()->fromPost("action") == "editarEstado") {
+            $nuevoEstado = $this->params()->fromPost("nuevo_estado");
+            $motivoCambio = $this->params()->fromPost("motivo_cambio");
+            $id_usuario = $this->params()->fromPost("id_usuario");
+            $puntosActuales = floatval($this->params()->fromPost("puntos_actuales"));
+            
+            $estadoAnterior = $solicitud[0]["id_estado"];
+            $user = $userTable->getUserById($id_usuario);
+            
+            // Actualizar estado de la solicitud
+            $params = array(
+                "id_estado" => $nuevoEstado,
+                "mensaje" => $motivoCambio
+            );
+            
+            $result = $formacionTable->update($params, ["id_formacion_academica" => $id_solicitud]);
+            
+            if ($result > 0) {
+                // Manejar puntos según el cambio de estado
+                $this->manejarCambioPuntos($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado);
+                
+                // Registrar en log
+                $estadoTexto = $this->getEstadoTexto($nuevoEstado);
+                $estadoAnteriorTexto = $this->getEstadoTexto($estadoAnterior);
+                
+                $logMessage = "Se cambió el estado de la solicitud de formación académica ID: {$id_solicitud} " .
+                            "de '{$estadoAnteriorTexto}' a '{$estadoTexto}'. " .
+                            "Usuario afectado: {$user[0]['nombre']}. Motivo: {$motivoCambio}";
+                
+                $this->saveLog($id_admin, $logMessage);
+                $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
+                
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
+            }
+        }
+
+        // ... resto del código existente para "rechazar" y "aceptar" ...
 
         if ($this->params()->fromPost("action") == "rechazar") {
             $params = $this->params()->fromPost();
@@ -1330,7 +1370,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-           
         }
 
         if ($this->params()->fromPost("action") == "aceptar") {
@@ -1339,7 +1378,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
             $resultado = $formacionTable->update($params, ["id_formacion_academica" => $id_solicitud]);
             
-
             if ($resultado > 0) {
                 $id_usuario = $this->params()->fromPost("id_usuario");
                 $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
@@ -1348,11 +1386,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $year = date("Y");
                 $auxPts = $this->params()->fromPost("puntos");
                 if($misPuntos){
-                    //Ya hay puntos 
-                    /*$nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
-                    if($nuevoPuntaje >= floatval($puntosActuales)){
-                        $nuevoPuntaje = $nuevoPuntaje;
-                    }*/
                     if($auxPts >= floatval($puntosActuales)){
                         $nuevoPuntaje = $auxPts;
                     }else{
@@ -1363,7 +1396,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                     $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
                     
                 }else{
-                    //No hay puntos
                     $params = array( "formacion_academica" => $auxPts,
                                     "id_usuario" => $id_usuario,
                                     "year"=>$year);
@@ -1378,11 +1410,58 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-
         }
 
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
+    }
 
+    private function manejarCambioPuntos($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado) {
+        $year = date("Y");
+        $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+        $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["formacion_academica"]) : 0;
+
+        // Si cambia de Aceptada (2) a Rechazada (3) o Ingresada (1) -> QUITAR puntos
+        if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
+            $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["formacion_academica" => $nuevosPuntos, "year" => $year],
+                    ["id_usuario" => $id_usuario]
+                );
+            }
+        }
+        
+        // Si cambia de Rechazada (3) o Ingresada (1) a Aceptada (2) -> AGREGAR puntos
+        if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
+            if ($puntosActuales >= $puntosUsuario) {
+                $nuevosPuntos = $puntosActuales;
+            } else {
+                $nuevosPuntos = $puntosUsuario;
+            }
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["formacion_academica" => $nuevosPuntos, "year" => $year],
+                    ["id_usuario" => $id_usuario]
+                );
+            } else {
+                $puntosTable->insert([
+                    "formacion_academica" => $puntosActuales,
+                    "id_usuario" => $id_usuario,
+                    "year" => $year
+                ]);
+            }
+        }
+    }
+
+    private function getEstadoTexto($idEstado) {
+        switch($idEstado) {
+            case 1: return 'Ingresada';
+            case 2: return 'Aceptada';
+            case 3: return 'Rechazada';
+            default: return 'Desconocido';
+        }
     }
 
     public function admInvestigacionesAction(){

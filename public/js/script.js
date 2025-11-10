@@ -816,6 +816,18 @@ function closeModalAdm() {
   $("#modalSolicitudes").modal("toggle");
 }
 
+function openModalEditar() {
+    let puntosActuales = document.querySelector("#puntos").value;
+    document.getElementById("puntosActuales").value = puntosActuales;
+    
+    $('#modalEditarEstado').modal('show');
+}
+
+function closeModalEditar() {
+    $('#modalEditarEstado').modal('hide');
+    document.getElementById("formEditarEstado").reset();
+}
+
 const changeSelected = (e, id, value) => {
   const $select = document.querySelector(`#${id}`);
   $select.value = value;
