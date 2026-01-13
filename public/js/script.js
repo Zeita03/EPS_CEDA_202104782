@@ -437,22 +437,43 @@ function validarExtension(input) {
   // var input = document.getElementById('archivo');
   var fileName = input.value;
   var extensionesPermitidas = /(\.pdf)$/i;
+  const maxSizeBytes = 5 * 1024 * 1024; // 5MB en bytes
+  const file = input.files[0];
 
+  // Validar que hay un archivo seleccionado
+  if (!file) {
+    return false;
+  }
+
+  // Validar extensión
   if (!extensionesPermitidas.exec(fileName)) {
-      Swal.fire({
+    Swal.fire({
       title: 'Error',
       text: 'La extensión del archivo no está permitida. Por favor, sube un archivo PDF.',
       icon: 'error',
       confirmButtonText: 'Aceptar',
       confirmButtonColor: '#05142b',
-      });
-      input.value = '';
-      return false;
+    });
+    input.value = '';
+    return false;
   }
 
-  // El archivo tiene una extensión permitida (PDF)
-  // Puedes realizar acciones adicionales o enviar el formulario
+  // Validar tamaño del archivo
+  if (file.size > maxSizeBytes) {
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+    Swal.fire({
+      title: 'Archivo demasiado grande',
+      text: `El archivo seleccionado pesa ${fileSizeMB}MB. El tamaño máximo permitido es 5MB.`,
+      icon: 'warning',
+      confirmButtonText: 'Aceptar',
+      confirmButtonColor: '#05142b',
+    });
+    input.value = '';
+    return false;
   }
+
+  return true;
+}
 
 
 // Example starter JavaScript for disabling form submissions if there are invalid fields
