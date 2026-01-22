@@ -107,12 +107,19 @@
                                                 <i class="fas fa-edit"></i>
                                             </button>
                                             
-                                            <?php if (($periodo['estadisticas']['total'] ?? 0) == 0): ?>
-                                                <button type="button" class="btn btn-outline-danger btn-sm" 
-                                                        onclick="eliminarPeriodo(<?= $periodo['id_periodo'] ?>, '<?= htmlspecialchars($periodo['nombre']) ?>')"
-                                                        title="Eliminar período">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
+                                            <!-- Botón Eliminar - Solo si NO tiene méritos -->
+                                            <?php if ($periodo['puede_eliminar']): ?>
+                                            <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                    onclick="eliminarPeriodo(<?= $periodo['id_periodo'] ?>, '<?= $this->escapeHtml($periodo['nombre_periodo']) ?>')">
+                                                <i class="fas fa-trash-alt"></i> Eliminar
+                                            </button>
+                                            <?php else: ?>
+                                            <!-- Mostrar botón deshabilitado con tooltip explicativo -->
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled 
+                                                    title="No se puede eliminar: período con méritos asociados" 
+                                                    data-bs-toggle="tooltip" data-bs-placement="top">
+                                                <i class="fas fa-trash-alt"></i> Eliminar
+                                            </button>
                                             <?php endif; ?>
                                         <?php endif; ?>
                                     </div>
@@ -618,10 +625,19 @@
             mostrarModalConfirmacion({
                 titulo: 'Eliminar Período',
                 mensaje: `¿Está seguro de eliminar el período <strong>"${nombrePeriodo}"</strong>?`,
-                detalle: 'Esta acción <strong>no se puede deshacer</strong>. Solo se pueden eliminar períodos sin méritos asociados.',
+                detalle: `
+                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                    <strong>Advertencia:</strong> Esta acción <strong>no se puede deshacer</strong>.<br><br>
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i>
+                        Solo se pueden eliminar períodos sin méritos asociados.
+                    </small>
+                `,
                 tipo: 'error',
-                textoConfirmar: 'Eliminar Período',
+                textoConfirmar: 'Sí, Eliminar',
+                textocancelar: 'Cancelar',
                 onConfirmar: function() {
+                    // Proceder directamente con la eliminación
                     const hiddenAction = document.getElementById('hidden_action');
                     const hiddenPeriodoId = document.getElementById('hidden_periodo_id');
                     const formAcciones = document.getElementById('formAccionesPeriodo');

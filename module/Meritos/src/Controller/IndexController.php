@@ -1942,6 +1942,34 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         return $periodosCerradosAutomaticamente;
     }
 
+    /**
+     * Valida si un período tiene méritos asociados
+     * @param int $periodoId
+     * @return bool
+     */
+    private function validarMeritosPeriodo($periodoId)
+    {
+        $tablas = ['formacion_academica', 'premios', 'cargos', 'investigaciones', 'capacitacion_profesional'];
+        
+        foreach ($tablas as $tabla) {
+            try {
+                $sql = "SELECT 1 FROM {$tabla} WHERE id_periodo = ? LIMIT 1";
+                $statement = $this->adapter->createStatement($sql);
+                $result = $statement->execute([$periodoId]);
+                
+                // Si encuentra al menos 1 registro, tiene méritos
+                if ($result->current()) {
+                    return true;
+                }
+            } catch (\Exception $e) {
+                // Si hay error con una tabla, continúa con las demás
+                continue;
+            }
+        }
+        
+        return false;
+    }
+
     //Configuracion 
     public function configuracionAction(){
         if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
@@ -2064,27 +2092,57 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                         $periodo_id = $this->getRequest()->getPost('periodo_id');
                         
                         // Verificar que no tenga méritos asociados
-                        $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
-                        $select = $formacionTable->getSql()->select();
-                        $select->columns(['count' => new \Laminas\Db\Sql\Expression('COUNT(*)')]);
-                        $select->where(['id_periodo' => $periodo_id]);
-                        $result = $formacionTable->selectWith($select)->toArray();
+                        $tieneMeritos = false;
+                        $detalleMeritos = [];
+                        $totalMeritos = 0;
                         
-                        if ($result[0]['count'] > 0) {
-                            throw new \Exception("No se puede eliminar un período que tiene méritos asociados.");
+                        // Verificar en todas las tablas de méritos
+                        $tablas = [
+                            'formacion_academica' => 'Formación Académica',
+                            'premios' => 'Premios',
+                            'cargos' => 'Cargos',
+                            'investigaciones' => 'Investigaciones',
+                            'capacitacion_profesional' => 'Capacitación Profesional'
+                        ];
+                        
+                        foreach ($tablas as $tabla => $categoria) {
+                            try {
+                                // Crear la consulta para cada tabla
+                                $sql = "SELECT COUNT(*) as count FROM {$tabla} WHERE id_periodo = ?";
+                                $statement = $this->adapter->createStatement($sql);
+                                $result = $statement->execute([$periodo_id]);
+                                $row = $result->current();
+                                
+                                if ($row['count'] > 0) {
+                                    $tieneMeritos = true;
+                                    $detalleMeritos[] = "{$categoria}: {$row['count']} mérito(s)";
+                                    $totalMeritos += $row['count'];
+                                }
+                            } catch (\Exception $e) {
+                                // Continuar con la siguiente tabla si hay error
+                                continue;
+                            }
                         }
                         
-                        // Eliminar período
-                        $sql = $periodosTable->getSql();
-                        $delete = $sql->delete();
-                        $delete->where(['id_periodo' => $periodo_id]);
-                        $statement = $sql->prepareStatementForSqlObject($delete);
-                        $statement->execute();
-                        
-                        $this->saveLog($id_admin, 'Se eliminó el período ID: ' . $periodo_id);
-                        $this->flashMessenger()->addSuccessMessage('Período eliminado exitosamente.');
+                        if ($tieneMeritos) {
+                            // Construir mensaje detallado
+                            $mensajeDetalle = implode('<br>• ', $detalleMeritos);
+                            $mensajeCompleto = "No se puede eliminar este período porque tiene <strong>{$totalMeritos} mérito(s)</strong> asociado(s):<br><br>• {$mensajeDetalle}<br><br>Solo se pueden eliminar períodos sin méritos asociados.";
+                            
+                            $this->flashMessenger()->addErrorMessage($mensajeCompleto);
+                            $this->saveLog($id_admin, "Intento fallido de eliminar período ID: {$periodo_id} - Tiene {$totalMeritos} méritos asociados");
+                        } else {
+                            // Si no tiene méritos, proceder con la eliminación
+                            $sql = $periodosTable->getSql();
+                            $delete = $sql->delete();
+                            $delete->where(['id_periodo' => $periodo_id]);
+                            $statement = $sql->prepareStatementForSqlObject($delete);
+                            $statement->execute();
+                            
+                            $this->saveLog($id_admin, 'Se eliminó el período ID: ' . $periodo_id);
+                            $this->flashMessenger()->addSuccessMessage('Período eliminado exitosamente.');
+                        }
                         break;
-                        
                     default:
                         throw new \Exception("Acción no válida.");
                 }
@@ -2099,9 +2157,15 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         // Obtener todos los períodos (después de la verificación automática)
         $periodos = $periodosTable->getAllPeriodos();
 
+        // Validar méritos asociados para cada período
+        foreach ($periodos as &$periodo) {
+            $periodo['tiene_meritos'] = $this->validarMeritosPeriodo($periodo['id_periodo']);
+            $periodo['puede_eliminar'] = !$periodo['tiene_meritos'];
+        }
+
         return new ViewModel([
-            "data" => $this->authService->getIdentity()->getData(), 
-            "periodos" => $periodos
+            'data' => $this->authService->getIdentity()->getData(),
+            'periodos' => $periodos,
         ]);
     }
 
