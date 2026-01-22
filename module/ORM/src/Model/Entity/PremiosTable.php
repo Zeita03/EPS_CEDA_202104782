@@ -22,7 +22,7 @@ class PremiosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
     public function getPremios() {
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = premios.id_estado");
-        $select->columns(['id_premios','nombre_premio', 'institucion', 'updated_at', 'url_constancia'])->join(['l' => 'usuario'], 'premios.id_usuario = l.usuario', ['nombre', 'grado_academico']);
+        $select->columns(['id_premio','nombre_premio', 'institucion', 'updated_at', 'url_constancia'])->join(['l' => 'usuario'], 'premios.id_usuario = l.usuario', ['nombre', 'grado_academico']);
         $data = $this->selectWith($select)->toArray();
         return $data;
     }
@@ -45,7 +45,7 @@ class PremiosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
     public function getPremiosById($id_usuario, $id_solicitud){
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = premios.id_estado");
-        $select->where->equalTo("id_premios", $id_solicitud);
+        $select->where->equalTo("id_premio", $id_solicitud);
         $select->where->equalTo("id_usuario", $id_usuario);
         $data = $this->selectWith($select)->toArray();
         return $data;
@@ -54,7 +54,7 @@ class PremiosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
     public function getSolicitud($id_solicitud){
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = premios.id_estado");
-        $select->where->equalTo("id_premios", $id_solicitud);
+        $select->where->equalTo("id_premio", $id_solicitud);
         $data = $this->selectWith($select)->toArray();
         return $data;
     }

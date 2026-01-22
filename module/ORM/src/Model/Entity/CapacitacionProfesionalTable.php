@@ -23,7 +23,7 @@ class CapacitacionProfesionalTable extends \Laminas\Db\TableGateway\AbstractTabl
     public function getCapacitacionProfesional() {
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = capacitacion_profesional.id_estado");
-        $select->columns(['id_capacitacion_profesional','nombre_capacitacion', 'institucion', 'updated_at', 'url_constancia'])->join(['l' => 'usuario'], 'capacitacion_profesional.id_usuario = l.usuario', ['nombre', 'grado_academico']);
+        $select->columns(['id_capacitacion','nombre_capacitacion', 'institucion', 'updated_at', 'url_constancia'])->join(['l' => 'usuario'], 'capacitacion_profesional.id_usuario = l.usuario', ['nombre', 'grado_academico']);
         $data = $this->selectWith($select)->toArray();
         return $data;
     }
@@ -46,7 +46,7 @@ class CapacitacionProfesionalTable extends \Laminas\Db\TableGateway\AbstractTabl
     public function getCapacitacionProfesionalById($id_usuario, $id_solicitud){
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = capacitacion_profesional.id_estado");
-        $select->where->equalTo("id_capacitacion_profesional", $id_solicitud);
+        $select->where->equalTo("id_capacitacion", $id_solicitud);
         $select->where->equalTo("id_usuario", $id_usuario);
         $data = $this->selectWith($select)->toArray();
         return $data;
@@ -55,7 +55,7 @@ class CapacitacionProfesionalTable extends \Laminas\Db\TableGateway\AbstractTabl
     public function getSolicitud($id_solicitud){
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = capacitacion_profesional.id_estado");
-        $select->where->equalTo("id_capacitacion_profesional", $id_solicitud);
+        $select->where->equalTo("id_capacitacion", $id_solicitud);
         $data = $this->selectWith($select)->toArray();
         return $data;
     }

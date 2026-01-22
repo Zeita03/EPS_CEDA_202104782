@@ -23,7 +23,7 @@ class InvestigacionesTable extends \Laminas\Db\TableGateway\AbstractTableGateway
     public function getInvestigaciones() {
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = investigaciones.id_estado");
-        $select->columns(['id_investigaciones','nombre_investigacion', 'institucion', 'updated_at', 'url_constancia'])->join(['l' => 'usuario'], 'investigaciones.id_usuario = l.usuario', ['nombre', 'grado_academico']);
+        $select->columns(['id_investigacion','nombre_investigacion', 'institucion', 'updated_at', 'url_constancia'])->join(['l' => 'usuario'], 'investigaciones.id_usuario = l.usuario', ['nombre', 'grado_academico']);
         $data = $this->selectWith($select)->toArray();
         return $data;
     }
@@ -46,7 +46,7 @@ class InvestigacionesTable extends \Laminas\Db\TableGateway\AbstractTableGateway
     public function getInvestigacionesById($id_usuario, $id_solicitud){
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = investigaciones.id_estado");
-        $select->where->equalTo("id_investigaciones", $id_solicitud);
+        $select->where->equalTo("id_investigacion", $id_solicitud);
         $select->where->equalTo("id_usuario", $id_usuario);
         $data = $this->selectWith($select)->toArray();
         return $data;
@@ -55,7 +55,7 @@ class InvestigacionesTable extends \Laminas\Db\TableGateway\AbstractTableGateway
     public function getSolicitud($id_solicitud){
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = investigaciones.id_estado");
-        $select->where->equalTo("id_investigaciones", $id_solicitud);
+        $select->where->equalTo("id_investigacion", $id_solicitud);
         $data = $this->selectWith($select)->toArray();
         return $data;
     }

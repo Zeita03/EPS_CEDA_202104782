@@ -488,7 +488,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 }
 
                 $result = $premiosTable->update($params, ["id_premio" => $idSolicitud]);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se edito la solicitud de premios con id '. $idSolicitud);
                     $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                 } else {
@@ -510,16 +510,14 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
     
                 $result = $premiosTable->insert($params);
         
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: premios');
                     $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                     
                 } else {
                     $this->saveLog($id_usuario, 'Error al realizar la solicitud');
                     $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.'); 
-                    
                 }
-                
             }
         }
 
@@ -557,10 +555,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
 
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
-
         if ($this->getRequest()->isPost()) {
 
             $params = $this->params()->fromPost();
@@ -593,7 +587,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 unset($params['fecha_obtencion']);
 
                 $result = $formacionTable->update($params, ["id_formacion_academica" => $idSolicitud]);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se edito la solicitud de formación academica con id '. $idSolicitud);
                     $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                 } else {
@@ -625,7 +619,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 unset($params['fecha_obtencion']);
     
                 $result = $formacionTable->insert($params);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria de formación académica');
                     $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                 } else {
@@ -668,10 +662,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
 
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
-
         if ($this->getRequest()->isPost()) {
 
             $params = $this->params()->fromPost();
@@ -694,7 +684,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                     }
     
                     $result = $cargosTable->update($params, ["id_cargo" => $idSolicitud]);
-                    if ($result > 0) {
+                    if ($result->getAffectedRows() > 0) {
                         $this->saveLog($id_usuario, 'Se edito la solicitud de cargos desempeñados con id '. $idSolicitud);
                         $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                     } else {
@@ -721,7 +711,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                     $params[$key] = $encripted_name;
         
                     $result = $cargosTable->insert($params);
-                    if ($result > 0) {
+                    if ($result->getAffectedRows() > 0) {
                         $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: cargos desempeñados');
                         $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                     } else {
@@ -768,10 +758,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
 
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
-
         if ($this->getRequest()->isPost()) {
 
             $params = $this->params()->fromPost();
@@ -792,7 +778,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 }
 
                 $result = $investigacionesTable->update($params, ["id_investigacion" => $idSolicitud]);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se edito la solicitud de investigaciones/publicaciones con id '. $idSolicitud);
                     $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                 } else {
@@ -813,7 +799,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $params[$key] = $encripted_name;
     
                 $result = $investigacionesTable->insert($params);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: Investigaciones/publicaciones');
                     $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                 } else {
@@ -855,10 +841,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
 
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
-
         if ($this->getRequest()->isPost()) {
 
             $params = $this->params()->fromPost();
@@ -879,7 +861,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 }
 
                 $result = $capacitacionTable->update($params, ["id_capacitacion" => $idSolicitud]);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se edito la solicitud de capacitación profesional con id '. $idSolicitud);
                     $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                 } else {
@@ -901,7 +883,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
     
                 $result = $capacitacionTable->insert($params);
                 
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: capacitación profesional');
                     $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                 } else {

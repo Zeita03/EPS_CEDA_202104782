@@ -23,7 +23,7 @@ class CargosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
     public function getCargos() {
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = cargos.id_estado");
-        $select->columns(['id_cargos','nombre_cargo', 'institucion', 'updated_at', 'url_constancia'])->join(['l' => 'usuario'], 'cargos.id_usuario = l.usuario', ['nombre', 'grado_academico']);
+        $select->columns(['id_cargo','nombre_cargo', 'institucion', 'updated_at', 'url_constancia'])->join(['l' => 'usuario'], 'cargos.id_usuario = l.usuario', ['nombre', 'grado_academico']);
         $data = $this->selectWith($select)->toArray();
         return $data;
     }
@@ -46,7 +46,7 @@ class CargosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
     public function getCargosById($id_usuario, $id_solicitud){
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = cargos.id_estado");
-        $select->where->equalTo("id_cargos", $id_solicitud);
+        $select->where->equalTo("id_cargo", $id_solicitud);
         $select->where->equalTo("id_usuario", $id_usuario);
         $data = $this->selectWith($select)->toArray();
         return $data;
@@ -55,7 +55,7 @@ class CargosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
     public function getSolicitud($id_solicitud){
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = cargos.id_estado");
-        $select->where->equalTo("id_cargos", $id_solicitud);
+        $select->where->equalTo("id_cargo", $id_solicitud);
         $data = $this->selectWith($select)->toArray();
         return $data;
     }
