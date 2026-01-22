@@ -2134,10 +2134,11 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                         } else {
                             // Si no tiene méritos, proceder con la eliminación
                             $sql = $periodosTable->getSql();
-                            $delete = $sql->delete();
-                            $delete->where(['id_periodo' => $periodo_id]);
-                            $statement = $sql->prepareStatementForSqlObject($delete);
-                            $statement->execute();
+                            $update = $sql->update();
+                            $update->set(['estado' => 'eliminado']);
+                            $update->where(['id_periodo' => $periodo_id]);
+                            $statement = $sql->prepareStatementForSqlObject($update);
+                            $result = $statement->execute();
                             
                             $this->saveLog($id_admin, 'Se eliminó el período ID: ' . $periodo_id);
                             $this->flashMessenger()->addSuccessMessage('Período eliminado exitosamente.');

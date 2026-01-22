@@ -40,7 +40,8 @@ class PeriodosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
     {
         $sql = $this->getSql();
         $select = $sql->select();
-        $select->order(['fecha_creacion' => 'DESC']);
+        $select->where(['estado != ?' => 'eliminado'])
+            ->order(['fecha_creacion' => 'DESC']);
         
         $statement = $sql->prepareStatementForSqlObject($select);
         $resultSet = $statement->execute();
@@ -135,5 +136,16 @@ class PeriodosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
             $result[] = $row;
         }
         return $result;
+    }
+
+    public function marcarComoEliminado($idPeriodo)
+    {
+        $sql = $this->getSql();
+        $update = $sql->update();
+        $update->set(['estado' => 'eliminado'])
+            ->where(['id_periodo' => $idPeriodo]);
+        
+        $statement = $sql->prepareStatementForSqlObject($update);
+        return $statement->execute();
     }
 }

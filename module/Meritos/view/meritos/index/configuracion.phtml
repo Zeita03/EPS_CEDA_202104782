@@ -109,17 +109,17 @@
                                             
                                             <!-- Botón Eliminar - Solo si NO tiene méritos -->
                                             <?php if ($periodo['puede_eliminar']): ?>
-                                            <button type="button" class="btn btn-sm btn-outline-danger" 
-                                                    onclick="eliminarPeriodo(<?= $periodo['id_periodo'] ?>, '<?= $this->escapeHtml($periodo['nombre_periodo']) ?>')">
-                                                <i class="fas fa-trash-alt"></i> Eliminar
-                                            </button>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="eliminarPeriodo(<?= $periodo['id_periodo'] ?>, '<?= $this->escapeHtml($periodo['nombre']) ?>')">
+                                                    <i class="fas fa-trash-alt"></i> Eliminar
+                                                </button>
                                             <?php else: ?>
-                                            <!-- Mostrar botón deshabilitado con tooltip explicativo -->
-                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled 
-                                                    title="No se puede eliminar: período con méritos asociados" 
-                                                    data-bs-toggle="tooltip" data-bs-placement="top">
-                                                <i class="fas fa-trash-alt"></i> Eliminar
-                                            </button>
+                                                <!-- Mostrar botón deshabilitado con tooltip explicativo -->
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" disabled 
+                                                        title="No se puede eliminar: período con méritos asociados" 
+                                                        data-bs-toggle="tooltip" data-bs-placement="top">
+                                                    <i class="fas fa-trash-alt"></i> Eliminar
+                                                </button>
                                             <?php endif; ?>
                                         <?php endif; ?>
                                     </div>
