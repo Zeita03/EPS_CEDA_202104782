@@ -1457,7 +1457,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             
             if ($result > 0) {
                 // Manejar puntos según el cambio de estado
-                $this->manejarCambioPuntos($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado);
+                $this->manejarCambioPuntosFormacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado);
                 
                 // Registrar en log
                 $estadoTexto = $this->getEstadoTexto($nuevoEstado);
@@ -1476,8 +1476,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             }
         }
 
-        // ... resto del código existente para "rechazar" y "aceptar" ...
-
         if ($this->params()->fromPost("action") == "rechazar") {
             $params = $this->params()->fromPost();
             $params['id_estado'] = '3';
@@ -1490,7 +1488,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $formacionTable->update($params, ["id_formacion_academica" => $id_solicitud]);
                 
             if ($result > 0) {
-                //$this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de formación profesional con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
@@ -1540,6 +1537,44 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         }
 
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
+    }
+
+    // Método auxiliar para manejar puntos de FORMACIÓN ACADÉMICA
+    private function manejarCambioPuntosFormacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado) {
+        $year = date("Y");
+        $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+        $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["formacion_academica"]) : 0;
+
+        // Si cambia de Aceptada (2) a Rechazada (3) o Ingresada (1) -> QUITAR puntos
+        if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
+            $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["formacion_academica" => $nuevosPuntos, "year" => $year],
+                    ["id_usuario" => $id_usuario]
+                );
+            }
+        }
+        
+        // Si cambia de Rechazada (3) o Ingresada (1) a Aceptada (2) -> AGREGAR puntos
+        if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
+            // Para formación académica se toma el mayor valor, no se suman
+            $nuevoPuntaje = max($puntosUsuario, $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["formacion_academica" => $nuevoPuntaje, "year" => $year],
+                    ["id_usuario" => $id_usuario]
+                );
+            } else {
+                $puntosTable->insert([
+                    "formacion_academica" => $puntosActuales,
+                    "id_usuario" => $id_usuario,
+                    "year" => $year
+                ]);
+            }
+        }
     }
 
     // Método auxiliar para manejar puntos de PREMIOS
