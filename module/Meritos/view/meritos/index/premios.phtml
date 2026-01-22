@@ -310,9 +310,7 @@ cargarInfo(<?= json_encode($this->dataedit[0]) ?>);
     }
     setFechaLimite();
 
-    // CAMBIAR ESTA PARTE:
     <?php if (isset($this->periodoActivo) && $this->periodoActivo): ?>
-        //  
         const fechaCompleta = '<?= $this->periodoActivo["fecha_fin"] ?>' + ' ' + '<?= $this->periodoActivo["hora_fin"] ?>';
         contadorTiempoDisponible(fechaCompleta);
     <?php endif; ?>

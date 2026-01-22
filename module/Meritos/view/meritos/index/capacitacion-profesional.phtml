@@ -397,26 +397,15 @@ cargarInfo(<?= json_encode($this->dataedit[0]) ?>);
 
 <script>
     const setFechaLimite = () => {
-        //console.log('Fecha maxima')
-        let today = new Date();
-        let dd = today.getDate();
-        let mm = today.getMonth()+1; //January is 0!
-        let yyyy = today.getFullYear();
-
-        if(dd<10) {
-            dd='0'+dd
-        } 
-        if(mm<10) {
-            mm='0'+mm
-        } 
-        today = yyyy+'-'+mm+'-'+dd;
-        document.getElementById('fecha_obtenida').max = today;
+        const duracionInput = document.getElementById('duracion');
+        if(duracionInput) {
+            duracionInput.max = 2000;  // Máximo 2000 horas (cursos muy extensos)
+            duracionInput.min = 1;     // Mínimo 1 hora
+        }
     }
     setFechaLimite();
 
-    // CAMBIAR ESTA PARTE:
     <?php if (isset($this->periodoActivo) && $this->periodoActivo): ?>
-        //  
         const fechaCompleta = '<?= $this->periodoActivo["fecha_fin"] ?>' + ' ' + '<?= $this->periodoActivo["hora_fin"] ?>';
         contadorTiempoDisponible(fechaCompleta);
     <?php endif; ?>
