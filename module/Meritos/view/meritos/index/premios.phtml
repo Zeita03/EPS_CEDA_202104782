@@ -310,54 +310,12 @@ cargarInfo(<?= json_encode($this->dataedit[0]) ?>);
     }
     setFechaLimite();
 
-    
-
-    /*const contadorTiempoDisponible = (fecha) =>{
-        // Fecha y hora objetivo (Año, Mes [0-11], Día, Hora, Minutos, Segundos)
-        // var fechaObjetivo = new Date('2023-12-31T23:59:59');
-      
-        //var fechaObjetivoUTC = moment.utc(fecha);
-        //console.log(fecha)
-        var fechaObjetivoGuatemala = moment(fecha);
-        //console.log(fechaObjetivoGuatemala);
-
-        // Convertir la fecha y hora objetivo a la zona horaria de Guatemala
-        //var fechaObjetivoGuatemala = fechaObjetivoUTC.clone().tz('America/Guatemala');
-
-        function actualizarContador() {
-            // Obtener la fecha y hora actual en la zona horaria de Guatemala
-            var ahoraGuatemala = moment().tz('America/Guatemala');
-
-            // Calcular la diferencia en milisegundos entre la fecha y hora actual y la fecha y hora objetivo
-            var diferencia = fechaObjetivoGuatemala.diff(ahoraGuatemala);
-
-            // Calcular los días, horas, minutos y segundos restantes
-            var duracion = moment.duration(diferencia);
-            var dias = duracion.days();
-            var horas = duracion.hours();
-            var minutos = duracion.minutes();
-            var segundos = duracion.seconds();
-
-            // Mostrar el contador en el elemento con el id 'contador'
-            document.getElementById('contador').innerHTML = `
-                <p>Tiempo disponible: ${dias} días, ${horas} horas, ${minutos} minutos, ${segundos} segundos</p>
-            `;
-
-            // Detener el contador cuando se alcanza la fecha objetivo
-            if (diferencia <= 0) {
-                clearInterval(intervalo);
-                document.getElementById('contador').innerHTML = '';
-            }
-        }
-
-        // Actualizar el contador cada segundo
-        var intervalo = setInterval(actualizarContador, 1000);
-    }*/
-
-    if('<?= $this->fecha ?>'){
-        contadorTiempoDisponible('<?= $this->fecha ?>');
-    }
-
+    // CAMBIAR ESTA PARTE:
+    <?php if (isset($this->periodoActivo) && $this->periodoActivo): ?>
+        //  
+        const fechaCompleta = '<?= $this->periodoActivo["fecha_fin"] ?>' + ' ' + '<?= $this->periodoActivo["hora_fin"] ?>';
+        contadorTiempoDisponible(fechaCompleta);
+    <?php endif; ?>
 </script>
 
 

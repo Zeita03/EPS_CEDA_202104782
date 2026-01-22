@@ -1,21 +1,32 @@
 <div class="row">
-    <!-- <div class="col-12">
-        <center><h2 class="text-danger">Acceso denegado</h2></center>
-    </div> -->
     <div class="container-fluid">
-
-        <!-- 404 Error Text -->
+        <!-- Mensaje de período inactivo -->
         <div class="text-center">
-            <div class="error mx-auto" data-text="403">403</div>
-            <p class="lead text-gray-800 mb-5">El periodo se encuentra inactivo...</p>
-            <p class="text-gray-500 mb-0">Parece que encontraste una falla en la matriz...</p>
-            <a href="<?= $this->url('home') ?>">&larr; Volver al panel</a>
+            <div class="error mx-auto" data-text="⏰">⏰</div>
+            <h2 class="text-warning mb-4">Período Inactivo</h2>
+            <p class="lead text-gray-800 mb-4">
+                Actualmente no hay períodos activos para la subida de méritos curriculares.
+            </p>
+            <p class="text-gray-600 mb-4">
+                Los docentes solo pueden subir méritos durante los períodos configurados por el administrador.
+            </p>
+            
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Información:</strong> Si necesita subir méritos, contacte al administrador para que active un período o verifique cuándo será el próximo período disponible.
+            </div>
+            
+            <div class="mt-4">
+                <a href="<?= $this->url('home') ?>" class="btn btn-primary">
+                    <i class="fas fa-home"></i> Volver al panel principal
+                </a>
+                
+                <?php if (isset($this->userAuth) && $this->userAuth->getRol() !== 'admin'): ?>
+                <a href="<?= $this->url('meritosHome/meritos', ['action' => 'misSolicitudes']) ?>" class="btn btn-outline-primary ms-2">
+                    <i class="fas fa-list"></i> Ver mis solicitudes anteriores
+                </a>
+                <?php endif; ?>
+            </div>
         </div>
-
     </div>
-
-
 </div>
-
-
-
