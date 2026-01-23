@@ -1,68 +1,699 @@
 <div class="row">
     <div class="">
-        <!-- <h1 class="h3 mb-2 text-gray-800"></h1> -->
         <div class="card flex-fill">
-            <!-- <div class="card-header">
-                <h5 class="card-title mb-0"> Configuración de tiempo de recepción de méritos curriculares </h5>
-            </div> -->
-
             <div class="card-header">
-                <h5 class="card-title mb-0"> Configuración general </h5>
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-calendar-alt"></i> Gestión de Períodos de Subida de Méritos
+                </h5>
+                <p class="text-muted mb-0">Configure los períodos durante los cuales los docentes pueden subir sus méritos curriculares.</p>
             </div>
             <div class="card-body">
+                
+                <!-- Botón para crear nuevo período -->
+                <div class="mb-3">
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCrearPeriodo">
+                        <i class="fas fa-plus"></i> Crear Nuevo Período
+                    </button>
+                </div>
 
-                <form class="user needs-validation" method="POST" enctype="multipart/form-data" novalidate>
-                    <div class="form-group row">
-                        <div class="col-sm-6 mb-3 mb-sm-0">
-                            <label class="form-label" for="startDate">Fecha apertura</label>
-                            <input type="date" class="form-control form-control-user" id="startDate" name="startDate" value="<?= $this->settings[0]["startDate"]; ?>" onchange="setMin();">
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="form-label" for="endDate">Fecha cierre</label>
-                            <input type="date" class="form-control form-control-user" id="endDate" name="endDate" value="<?= $this->settings[0]["endDate"]; ?>" onchange="setMax();">
-                        </div>
-                    </div>
-
-                    <div class="form-group row">
-                        <div class="col-sm-6 mb-3 mb-sm-0">
-                            <label class="form-label" for="startDate">Hora apertura</label>
-                            <input type="time" class="form-control form-control-user" id="startTime" name="startTime" value="<?= $this->settings[0]["startTime"]; ?>" >
-                        </div>
-                        <div class="col-sm-6">
-                            <label class="form-label" for="endDate">Hora cierre</label>
-                            <input type="time" class="form-control form-control-user" id="endTime" name="endTime" value="<?= $this->settings[0]["endTime"]; ?>" >
-                        </div>
-                    </div>
-                    <div class="form-group row" style="display:none;" id="group-nota">
-                        <div class="">
-                            <label class="form-label" for="nota">Nota:</label>
-                            <textarea  class="form-control" name="nota" id="nota" rows="3" maxLength=150></textarea>
-                        </div>
-                    </div>
-                    
-
-                    <!-- <a class="btn btn-primary btn-user btn-block">
-                        Guardar Configuración
-                    </a> -->
-                    
-                    <div class="mt-3">
-                        <div class="btn btn-dark" id="btn-nota" onclick="activateTxt();">
-                            Agregar nota
-                        </div>
-                    </div>
-
-                    <div class="mt-3">
-                        <input type="submit" class="btn btn-primary btn-user" value="Guardar configuración" /> 
-                    </div>
-                    
-                </form>
-
-
-
+                <!-- Tabla de períodos existentes - SOLO ÚLTIMOS 2 -->
+                <?php if (!empty($periodos)): ?>
+                    <?php 
+                    // Mostrar solo los últimos 2 períodos
+                    $periodosRecientes = array_slice($periodos, 0, 2); 
+                    ?>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Fecha y Hora Inicio</th>
+                                <th>Fecha y Hora Fin</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($periodosRecientes as $periodo): ?>
+                            <tr class="<?= $periodo['estado'] === 'activo' ? 'table-success' : '' ?>">
+                                <td><?= $periodo['id_periodo'] ?></td>
+                                <td>
+                                    <strong><?= htmlspecialchars($periodo['nombre']) ?></strong>
+                                    <?php if ($periodo['estado'] === 'activo'): ?>
+                                        <span class="badge bg-success ms-1">ACTIVO</span>
+                                    <?php endif; ?>
+                                    <br><small class="text-muted"><?= htmlspecialchars($periodo['descripcion'] ?? '') ?></small>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong><?= date('d/m/Y', strtotime($periodo['fecha_inicio'])) ?></strong>
+                                    </div>
+                                    <small class="text-muted">
+                                        <?= date('H:i', strtotime($periodo['hora_inicio'])) ?>
+                                    </small>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong><?= date('d/m/Y', strtotime($periodo['fecha_fin'])) ?></strong>
+                                    </div>
+                                    <small class="text-muted">
+                                        <?= date('H:i', strtotime($periodo['hora_fin'])) ?>
+                                    </small>
+                                </td>
+                                <td>
+                                    <?php
+                                    $badgeClass = '';
+                                    switch($periodo['estado']) {
+                                        case 'activo': $badgeClass = 'bg-success'; break;
+                                        case 'inactivo': $badgeClass = 'bg-warning text-dark'; break;
+                                        case 'cerrado': $badgeClass = 'bg-secondary'; break;
+                                        default: $badgeClass = 'bg-light text-dark';
+                                    }
+                                    ?>
+                                    <span class="badge <?= $badgeClass ?>">
+                                        <?= strtoupper($periodo['estado']) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <?php if ($periodo['estado'] === 'cerrado'): ?>
+                                            <!-- BOTONES BLOQUEADOS PARA PERÍODOS CERRADOS -->
+                                            <button type="button" class="btn btn-outline-secondary btn-sm" disabled
+                                                    title="Período cerrado - No se pueden realizar acciones">
+                                                <i class="fas fa-lock"></i>
+                                            </button>
+                                        <?php else: ?>
+                                            <!-- BOTONES NORMALES PARA PERÍODOS ACTIVOS/INACTIVOS -->
+                                            <?php if ($periodo['estado'] !== 'activo'): ?>
+                                                <button type="button" class="btn btn-outline-success btn-sm" 
+                                                        onclick="activarPeriodo(<?= $periodo['id_periodo'] ?>, '<?= htmlspecialchars($periodo['nombre']) ?>')"
+                                                        title="Activar período">
+                                                    <i class="fas fa-play"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                            
+                                            <?php if ($periodo['estado'] === 'activo'): ?>
+                                                <button type="button" class="btn btn-outline-warning btn-sm" 
+                                                        onclick="cerrarPeriodo(<?= $periodo['id_periodo'] ?>, '<?= htmlspecialchars($periodo['nombre']) ?>')"
+                                                        title="Cerrar período">
+                                                    <i class="fas fa-stop"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                            
+                                            <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                    onclick="editarPeriodo(<?= htmlspecialchars(json_encode($periodo)) ?>)"
+                                                    title="Editar período">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            
+                                            <!-- Botón Eliminar - Solo si NO tiene méritos -->
+                                            <?php if ($periodo['puede_eliminar']): ?>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                        onclick="eliminarPeriodo(<?= $periodo['id_periodo'] ?>, '<?= $this->escapeHtml($periodo['nombre']) ?>')">
+                                                    <i class="fas fa-trash-alt"></i> Eliminar
+                                                </button>
+                                            <?php else: ?>
+                                                <!-- Mostrar botón deshabilitado con tooltip explicativo -->
+                                                <button type="button" class="btn btn-sm btn-outline-secondary" disabled 
+                                                        title="No se puede eliminar: período con méritos asociados" 
+                                                        data-bs-toggle="tooltip" data-bs-placement="top">
+                                                    <i class="fas fa-trash-alt"></i> Eliminar
+                                                </button>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Mostrar información sobre períodos ocultos -->
+                <?php if (count($periodos) > 2): ?>
+                <div class="alert alert-info mt-2">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>Información:</strong> Se muestran solo los 2 períodos más recientes. 
+                    Total de períodos: <?= count($periodos) ?>
+                    <a href="#" onclick="toggleTodosPeriodos()" class="ms-2">Ver todos los períodos</a>
+                </div>
+                <?php endif; ?>
+                
+                <?php else: ?>
+                <div class="alert alert-warning text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <h5>No hay períodos configurados</h5>
+                    <p>Para que los docentes puedan subir méritos, debe crear al menos un período activo.</p>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalCrearPeriodo">
+                        <i class="fas fa-plus"></i> Crear Primer Período
+                    </button>
+                </div>
+                <?php endif; ?>
             </div>
-
         </div>
-
     </div>
-        
 </div>
+
+<!-- Historico de periodos  -->
+<?php if (!empty($periodos) && count($periodos) > 2): ?>
+<div class="row mt-3" id="tablaTodosPeriodos" style="display: none;">
+    <div class="">
+        <div class="card flex-fill">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-history"></i> Historial Completo de Períodos
+                </h5>
+                <button type="button" class="btn btn-sm btn-outline-secondary float-end" onclick="toggleTodosPeriodos()">
+                    <i class="fas fa-times"></i> Ocultar
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover table-sm">
+                        <thead class="table-secondary">
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Fecha y Hora Inicio</th>
+                                <th>Fecha y Hora Fin</th>
+                                <th>Estado</th>
+                                <th>Creado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($periodos as $periodo): ?>
+                            <tr class="<?= $periodo['estado'] === 'activo' ? 'table-success' : '' ?>">
+                                <td><?= $periodo['id_periodo'] ?></td>
+                                <td>
+                                    <div><?= htmlspecialchars($periodo['nombre']) ?></div>
+                                    <?php if ($periodo['estado'] === 'activo'): ?>
+                                        <span class="badge bg-success">ACTIVO</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <div><strong><?= date('d/m/Y', strtotime($periodo['fecha_inicio'])) ?></strong></div>
+                                    <small><?= date('H:i', strtotime($periodo['hora_inicio'])) ?></small>
+                                </td>
+                                <td>
+                                    <div><strong><?= date('d/m/Y', strtotime($periodo['fecha_fin'])) ?></strong></div>
+                                    <small><?= date('H:i', strtotime($periodo['hora_fin'])) ?></small>
+                                </td>
+                                <td>
+                                    <?php
+                                    $badgeClass = '';
+                                    switch($periodo['estado']) {
+                                        case 'activo': $badgeClass = 'bg-success'; break;
+                                        case 'inactivo': $badgeClass = 'bg-warning text-dark'; break;
+                                        case 'cerrado': $badgeClass = 'bg-secondary'; break;
+                                        default: $badgeClass = 'bg-light text-dark';
+                                    }
+                                    ?>
+                                    <span class="badge <?= $badgeClass ?>"><?= strtoupper($periodo['estado']) ?></span>
+                                </td>
+                                <td>
+                                    <small><?= isset($periodo['fecha_creacion']) ? date('d/m/Y H:i', strtotime($periodo['fecha_creacion'])) : 'N/A' ?></small>
+                                </td>
+                                <td>
+                                    <?php if ($periodo['estado'] === 'cerrado'): ?>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" disabled
+                                                title="Período cerrado">
+                                            <i class="fas fa-lock"></i>
+                                        </button>
+                                    <?php else: ?>
+                                        <div class="btn-group btn-group-sm">
+                                            <?php if ($periodo['estado'] !== 'activo'): ?>
+                                                <button type="button" class="btn btn-outline-success btn-sm" 
+                                                        onclick="activarPeriodo(<?= $periodo['id_periodo'] ?>, '<?= htmlspecialchars($periodo['nombre']) ?>')"
+                                                        title="Activar">
+                                                    <i class="fas fa-play"></i>
+                                                </button>
+                                            <?php endif; ?>
+                                            <button type="button" class="btn btn-outline-primary btn-sm" 
+                                                    onclick="editarPeriodo(<?= htmlspecialchars(json_encode($periodo)) ?>)"
+                                                    title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </div>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- MODAL UNIVERSAL PARA ALERTAS Y CONFIRMACIONES -->
+<div class="modal fade" id="modalConfirmacion" tabindex="-1" aria-labelledby="modalConfirmacionLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" id="modalHeaderConfirmacion">
+                <h5 class="modal-title" id="modalConfirmacionLabel">
+                    <i class="fas fa-question-circle" id="modalIconConfirmacion"></i>
+                    <span id="modalTituloConfirmacion">Confirmar Acción</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="modalMensajeConfirmacion">¿Está seguro de realizar esta acción?</p>
+                <div id="modalDetalleConfirmacion" class="alert alert-info mt-3" style="display: none;">
+                    <small id="modalDetalleTexto"></small>
+                </div>
+            </div>
+            <div class="modal-footer" id="modalFooterConfirmacion">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" id="btnCancelarModal">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="button" class="btn btn-primary" id="btnConfirmarModal">
+                    <i class="fas fa-check"></i> Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Crear Nuevo Período -->
+<div class="modal fade" id="modalCrearPeriodo" tabindex="-1" aria-labelledby="modalCrearPeriodoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" id="formCrearPeriodo">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="modalCrearPeriodoLabel">
+                        <i class="fas fa-plus"></i> Crear Nuevo Período
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="crear_periodo">
+                    
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="nombre" class="form-label">Nombre del Período *</label>
+                                <input type="text" class="form-control" id="nombre" name="nombre" 
+                                       placeholder="Ej: Período 2026 - Primer Semestre" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="activar_ahora" class="form-label">Estado Inicial</label>
+                                <select class="form-select" id="activar_ahora" name="activar_ahora">
+                                    <option value="0">Inactivo</option>
+                                    <option value="1">Activo</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="descripcion" name="descripcion" rows="2"
+                                  placeholder="Descripción opcional del período"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fecha_inicio" class="form-label">Fecha de Inicio *</label>
+                                <input type="date" class="form-control" id="fecha_inicio" name="fecha_inicio" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fecha_fin" class="form-label">Fecha de Fin *</label>
+                                <input type="date" class="form-control" id="fecha_fin" name="fecha_fin" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="hora_inicio" class="form-label">Hora de Inicio</label>
+                                <input type="time" class="form-control" id="hora_inicio" name="hora_inicio" value="00:00">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="hora_fin" class="form-label">Hora de Fin</label>
+                                <input type="time" class="form-control" id="hora_fin" name="hora_fin" value="23:59">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Importante:</strong> Si activa este período, el período activo anterior se desactivará automáticamente.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Crear Período
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: Editar Período -->
+<div class="modal fade" id="modalEditarPeriodo" tabindex="-1" aria-labelledby="modalEditarPeriodoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" id="formEditarPeriodo">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="modalEditarPeriodoLabel">
+                        <i class="fas fa-edit"></i> Editar Período
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="action" value="editar_periodo">
+                    <input type="hidden" name="periodo_id" id="edit_periodo_id">
+                    
+                    <div class="mb-3">
+                        <label for="edit_nombre" class="form-label">Nombre del Período *</label>
+                        <input type="text" class="form-control" id="edit_nombre" name="nombre" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_descripcion" class="form-label">Descripción</label>
+                        <textarea class="form-control" id="edit_descripcion" name="descripcion" rows="2"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_fecha_inicio" class="form-label">Fecha de Inicio *</label>
+                                <input type="date" class="form-control" id="edit_fecha_inicio" name="fecha_inicio" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_fecha_fin" class="form-label">Fecha de Fin *</label>
+                                <input type="date" class="form-control" id="edit_fecha_fin" name="fecha_fin" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AGREGAR CAMPOS DE HORA -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_hora_inicio" class="form-label">Hora de Inicio</label>
+                                <input type="time" class="form-control" id="edit_hora_inicio" name="hora_inicio">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_hora_fin" class="form-label">Hora de Fin</label>
+                                <input type="time" class="form-control" id="edit_hora_fin" name="hora_fin">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- FORMULARIOS OCULTOS PARA ACCIONES -->
+<form method="post" id="formAccionesPeriodo" style="display: none;">
+    <input type="hidden" name="action" id="hidden_action">
+    <input type="hidden" name="periodo_id" id="hidden_periodo_id">
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+
+        // FUNCIÓN UNIVERSAL PARA MOSTRAR MODALES DE CONFIRMACIÓN
+        window.mostrarModalConfirmacion = function(opciones) {
+            const {
+                titulo = 'Confirmar Acción',
+                mensaje = '¿Está seguro de realizar esta acción?',
+                detalle = '',
+                tipo = 'confirmacion', // 'confirmacion', 'error', 'exito', 'advertencia'
+                textoConfirmar = 'Confirmar',
+                textocancelar = 'Cancelar',
+                onConfirmar = function(){},
+                onCancelar = function(){}
+            } = opciones;
+            
+            // Elementos del modal
+            const modal = document.getElementById('modalConfirmacion');
+            const modalHeader = document.getElementById('modalHeaderConfirmacion');
+            const modalIcon = document.getElementById('modalIconConfirmacion');
+            const modalTitulo = document.getElementById('modalTituloConfirmacion');
+            const modalMensaje = document.getElementById('modalMensajeConfirmacion');
+            const modalDetalle = document.getElementById('modalDetalleConfirmacion');
+            const modalDetalleTexto = document.getElementById('modalDetalleTexto');
+            const modalFooter = document.getElementById('modalFooterConfirmacion');
+            const btnConfirmar = document.getElementById('btnConfirmarModal');
+            const btnCancelar = document.getElementById('btnCancelarModal');
+            
+            // Configurar contenido
+            modalTitulo.textContent = titulo;
+            modalMensaje.innerHTML = mensaje;
+            btnConfirmar.innerHTML = `<i class="fas fa-check"></i> ${textoConfirmar}`;
+            btnCancelar.innerHTML = `<i class="fas fa-times"></i> ${textocancelar}`;
+            
+            // Mostrar/ocultar detalle
+            if (detalle) {
+                modalDetalleTexto.innerHTML = detalle;
+                modalDetalle.style.display = 'block';
+            } else {
+                modalDetalle.style.display = 'none';
+            }
+            
+            // Configurar estilos según el tipo
+            modalHeader.className = 'modal-header text-white';
+            btnConfirmar.className = 'btn';
+            modalIcon.className = 'fas me-2';
+            
+            switch(tipo) {
+                case 'error':
+                    modalHeader.classList.add('bg-danger');
+                    modalIcon.classList.add('fa-exclamation-triangle');
+                    btnConfirmar.classList.add('btn-danger');
+                    break;
+                case 'exito':
+                    modalHeader.classList.add('bg-success');
+                    modalIcon.classList.add('fa-check-circle');
+                    btnConfirmar.classList.add('btn-success');
+                    break;
+                case 'advertencia':
+                    modalHeader.classList.add('bg-warning', 'text-dark');
+                    modalIcon.classList.add('fa-exclamation-triangle');
+                    btnConfirmar.classList.add('btn-warning');
+                    break;
+                default:
+                    modalHeader.classList.add('bg-primary');
+                    modalIcon.classList.add('fa-question-circle');
+                    btnConfirmar.classList.add('btn-primary');
+                    break;
+            }
+            
+            // Configurar eventos
+            btnConfirmar.onclick = function() {
+                onConfirmar();
+                // Cerrar modal
+                if (typeof bootstrap !== 'undefined') {
+                    const modalInstance = bootstrap.Modal.getInstance(modal);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                } else {
+                    modal.style.display = 'none';
+                }
+            };
+            
+            btnCancelar.onclick = function() {
+                onCancelar();
+            };
+            
+            // Mostrar modal
+            if (typeof bootstrap !== 'undefined') {
+                const modalInstance = new bootstrap.Modal(modal);
+                modalInstance.show();
+            } else {
+                modal.style.display = 'block';
+                modal.classList.add('show');
+            }
+        };
+        
+        // Función para mostrar/ocultar todos los períodos
+        window.toggleTodosPeriodos = function() {
+            const tabla = document.getElementById('tablaTodosPeriodos');
+            if (tabla && tabla.style.display === 'none') {
+                tabla.style.display = 'block';
+                // Scroll suave hacia la tabla expandida
+                tabla.scrollIntoView({ behavior: 'smooth' });
+            } else if (tabla) {
+                tabla.style.display = 'none';
+            }
+        };
+
+        // Validar fechas en el formulario de crear período
+        const formCrear = document.getElementById('formCrearPeriodo');
+        if (formCrear) {
+            formCrear.addEventListener('submit', function(e) {
+                const fechaInicio = document.getElementById('fecha_inicio');
+                const fechaFin = document.getElementById('fecha_fin');
+                
+                if (fechaInicio && fechaFin && fechaInicio.value && fechaFin.value && fechaInicio.value >= fechaFin.value) {
+                    e.preventDefault();
+                    alert('La fecha de fin debe ser posterior a la fecha de inicio.');
+                    return false;
+                }
+            });
+        }
+
+        // Validar fechas en el formulario de editar período
+        const formEditar = document.getElementById('formEditarPeriodo');
+        if (formEditar) {
+            formEditar.addEventListener('submit', function(e) {
+                const fechaInicio = document.getElementById('edit_fecha_inicio');
+                const fechaFin = document.getElementById('edit_fecha_fin');
+                
+                if (fechaInicio && fechaFin && fechaInicio.value && fechaFin.value && fechaInicio.value >= fechaFin.value) {
+                    e.preventDefault();
+                    alert('La fecha de fin debe ser posterior a la fecha de inicio.');
+                    return false;
+                }
+            });
+        }
+
+        // Función para activar período
+        window.activarPeriodo = function(idPeriodo, nombrePeriodo) {
+            mostrarModalConfirmacion({
+                titulo: 'Activar Período',
+                mensaje: `¿Está seguro de activar el período <strong>"${nombrePeriodo}"</strong>?`,
+                detalle: 'Esta acción desactivará el período activo actual y permitirá que los usuarios suban méritos al nuevo período.',
+                tipo: 'confirmacion',
+                textoConfirmar: 'Activar Período',
+                onConfirmar: function() {
+                    const hiddenAction = document.getElementById('hidden_action');
+                    const hiddenPeriodoId = document.getElementById('hidden_periodo_id');
+                    const formAcciones = document.getElementById('formAccionesPeriodo');
+                    
+                    if (hiddenAction && hiddenPeriodoId && formAcciones) {
+                        hiddenAction.value = 'activar_periodo';
+                        hiddenPeriodoId.value = idPeriodo;
+                        formAcciones.submit();
+                    }
+                }
+            });
+        };
+
+        // Función para cerrar período
+        window.cerrarPeriodo = function(idPeriodo, nombrePeriodo) {
+            mostrarModalConfirmacion({
+                titulo: 'Cerrar Período',
+                mensaje: `¿Está seguro de cerrar el período <strong>"${nombrePeriodo}"</strong>?`,
+                detalle: 'Una vez cerrado, no se podrán subir más méritos a este período y <strong>no se podrá reactivar</strong>.',
+                tipo: 'advertencia',
+                textoConfirmar: 'Cerrar Período',
+                onConfirmar: function() {
+                    const hiddenAction = document.getElementById('hidden_action');
+                    const hiddenPeriodoId = document.getElementById('hidden_periodo_id');
+                    const formAcciones = document.getElementById('formAccionesPeriodo');
+                    
+                    if (hiddenAction && hiddenPeriodoId && formAcciones) {
+                        hiddenAction.value = 'cerrar_periodo';
+                        hiddenPeriodoId.value = idPeriodo;
+                        formAcciones.submit();
+                    }
+                }
+            });
+        };
+
+        // Función para eliminar período
+        window.eliminarPeriodo = function(idPeriodo, nombrePeriodo) {
+            mostrarModalConfirmacion({
+                titulo: 'Eliminar Período',
+                mensaje: `¿Está seguro de eliminar el período <strong>"${nombrePeriodo}"</strong>?`,
+                detalle: `
+                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                    <strong>Advertencia:</strong> Esta acción <strong>no se puede deshacer</strong>.<br><br>
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle"></i>
+                        Solo se pueden eliminar períodos sin méritos asociados.
+                    </small>
+                `,
+                tipo: 'error',
+                textoConfirmar: 'Sí, Eliminar',
+                textocancelar: 'Cancelar',
+                onConfirmar: function() {
+                    // Proceder directamente con la eliminación
+                    const hiddenAction = document.getElementById('hidden_action');
+                    const hiddenPeriodoId = document.getElementById('hidden_periodo_id');
+                    const formAcciones = document.getElementById('formAccionesPeriodo');
+                    
+                    if (hiddenAction && hiddenPeriodoId && formAcciones) {
+                        hiddenAction.value = 'eliminar_periodo';
+                        hiddenPeriodoId.value = idPeriodo;
+                        formAcciones.submit();
+                    }
+                }
+            });
+        };
+
+        // Función para editar período
+        window.editarPeriodo = function(periodo) {
+            const editPeriodoId = document.getElementById('edit_periodo_id');
+            const editNombre = document.getElementById('edit_nombre');
+            const editDescripcion = document.getElementById('edit_descripcion');
+            const editFechaInicio = document.getElementById('edit_fecha_inicio');
+            const editFechaFin = document.getElementById('edit_fecha_fin');
+            const editHoraInicio = document.getElementById('edit_hora_inicio');
+            const editHoraFin = document.getElementById('edit_hora_fin');
+            const modalElement = document.getElementById('modalEditarPeriodo');
+            
+            if (editPeriodoId && editNombre && editDescripcion && editFechaInicio && editFechaFin && modalElement) {
+                editPeriodoId.value = periodo.id_periodo;
+                editNombre.value = periodo.nombre;
+                editDescripcion.value = periodo.descripcion || '';
+                editFechaInicio.value = periodo.fecha_inicio;
+                editFechaFin.value = periodo.fecha_fin;
+                
+                // AGREGAR VALORES DE HORA
+                if (editHoraInicio) editHoraInicio.value = periodo.hora_inicio || '00:00';
+                if (editHoraFin) editHoraFin.value = periodo.hora_fin || '23:59';
+                
+                // Verificar si Bootstrap está cargado
+                if (typeof bootstrap !== 'undefined') {
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+                } else {
+                    // Fallback para mostrar el modal sin Bootstrap
+                    modalElement.style.display = 'block';
+                    modalElement.classList.add('show');
+                }
+            }
+        };
+
+        // Establecer fecha mínima para nuevo período
+        const fechaInicio = document.getElementById('fecha_inicio');
+        const fechaFin = document.getElementById('fecha_fin');
+        
+        if (fechaInicio && fechaFin) {
+            const today = new Date().toISOString().split('T')[0];
+            fechaInicio.min = today;
+            fechaFin.min = today;
+        }
+        
+    });
+</script>

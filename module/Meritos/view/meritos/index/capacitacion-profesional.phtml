@@ -396,7 +396,17 @@ cargarInfo(<?= json_encode($this->dataedit[0]) ?>);
 <!-- Fin edicion solicitud -->
 
 <script>
-    if('<?= $this->fecha ?>'){
-        contadorTiempoDisponible('<?= $this->fecha ?>');
+    const setFechaLimite = () => {
+        const duracionInput = document.getElementById('duracion');
+        if(duracionInput) {
+            duracionInput.max = 2000;  // Máximo 2000 horas (cursos muy extensos)
+            duracionInput.min = 1;     // Mínimo 1 hora
+        }
     }
+    setFechaLimite();
+
+    <?php if (isset($this->periodoActivo) && $this->periodoActivo): ?>
+        const fechaCompleta = '<?= $this->periodoActivo["fecha_fin"] ?>' + ' ' + '<?= $this->periodoActivo["hora_fin"] ?>';
+        contadorTiempoDisponible(fechaCompleta);
+    <?php endif; ?>
 </script>

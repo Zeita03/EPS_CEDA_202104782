@@ -366,8 +366,9 @@ cargarInfo(<?= json_encode($this->dataedit[0]) ?>);
 <?php endif; ?>
 <!-- fin edicion -->
 
-<script>
-    if('<?= $this->fecha ?>'){
-        contadorTiempoDisponible('<?= $this->fecha ?>');
-    }
+<script>    
+    <?php if (isset($this->periodoActivo) && $this->periodoActivo): ?>
+        const fechaCompleta = '<?= $this->periodoActivo["fecha_fin"] ?>' + ' ' + '<?= $this->periodoActivo["hora_fin"] ?>';
+        contadorTiempoDisponible(fechaCompleta);
+    <?php endif; ?>
 </script>

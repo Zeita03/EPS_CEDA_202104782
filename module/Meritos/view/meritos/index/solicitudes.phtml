@@ -205,6 +205,32 @@
 $this->headScript()->appendScript('
     $(document).ready(function() {
 
+        // Configuración de idioma español local
+        var configuracionEspanol = {
+            "decimal": ",",
+            "emptyTable": "No hay datos disponibles en la tabla",
+            "info": "Mostrando _START_ a _END_ de _TOTAL_ entradas",
+            "infoEmpty": "Mostrando 0 a 0 de 0 entradas",
+            "infoFiltered": "(filtrado de _MAX_ entradas totales)",
+            "infoPostFix": "",
+            "thousands": ".",
+            "lengthMenu": "Mostrar _MENU_ entradas",
+            "loadingRecords": "Cargando...",
+            "processing": "Procesando...",
+            "search": "Buscar:",
+            "zeroRecords": "No se encontraron registros coincidentes",
+            "paginate": {
+                "first": "Primero",
+                "last": "Último",
+                "next": "Siguiente",
+                "previous": "Anterior"
+            },
+            "aria": {
+                "sortAscending": ": activar para ordenar la columna ascendente",
+                "sortDescending": ": activar para ordenar la columna descendente"
+            }
+        };
+
         // Verificar si hay filas en el HTML ANTES de inicializar DataTable
         var filasEnHTML = $("#dataTable tbody tr").length;
         var table;
@@ -220,9 +246,7 @@ $this->headScript()->appendScript('
                 
                 // Recrear DataTable
                 table = $("#dataTable").DataTable({
-                    "language": { 
-                        "url": "//cdn.datatables.net/plug-ins/1.12.1/i18n/es-ES.json" 
-                    },
+                    "language": configuracionEspanol,
                     "order": [[1, "asc"], [0, "desc"]],
                     "pageLength": 25,
                     "destroy": true,
@@ -232,9 +256,7 @@ $this->headScript()->appendScript('
         } else {
             // Crear nueva instancia
             table = $("#dataTable").DataTable({
-                "language": { 
-                    "url": "//cdn.datatables.net/plug-ins/1.12.1/i18n/es-ES.json" 
-                },
+                "language": configuracionEspanol,
                 "order": [[1, "asc"], [0, "desc"]],
                 "pageLength": 25,
                 "destroy": true,
@@ -243,7 +265,10 @@ $this->headScript()->appendScript('
         }
 
         // Verificar estado final
-        if (table.rows().count() > 0) {
+        var filasFinales = table.rows().count();
+        
+        if (filasFinales > 0) {
+            
             // Verificar contenido de la columna de estado
             var estadosUnicos = [];
             table.column(5).data().each(function(value) {
@@ -252,7 +277,6 @@ $this->headScript()->appendScript('
                     estadosUnicos.push(estadoLimpio);
                 }
             });
-            
             
             // Aplicar filtro inicial para mostrar solo "Ingresada"
             table.column(5).search("Ingresada", false, false).draw();
@@ -283,8 +307,11 @@ $this->headScript()->appendScript('
                 }
             });
         } else {
-            console.warn("No se pudo inicializar la tabla con datos");
-            $("#dataTable tbody").html("<tr><td colspan=\"7\" class=\"text-center\">No hay solicitudes para mostrar</td></tr>");
+            console.warn("No se pudo inicializar la tabla con datos - Verificando HTML...");
+            
+            if (filasEnHTML === 0) {
+                $("#dataTable tbody").html("<tr><td colspan=\"7\" class=\"text-center text-muted\"><i class=\"fas fa-info-circle\"></i> No hay solicitudes para mostrar en este momento</td></tr>");
+            }
         }
     });
 

@@ -46,25 +46,25 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         //verificar si tiene el permiso para ingresar a esta acción...
         $authManager = new \Auth\Service\AuthManager($this->authService, $this->adapter);
         
-
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        
         if($nombreAccion == 'premios' || $nombreAccion == 'formacionAcademica' || $nombreAccion == 'cargos' || $nombreAccion == 'investigaciones' || $nombreAccion == 'capacitacionProfesional'){
             
-            $fechaInicial = $settings[0]['startDate'] . " ". $settings[0]['startTime'] .":00";
-            $fechaFinal = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
-
-            date_default_timezone_set('America/Guatemala');
-
-            $datetime1 = new DateTime($fechaInicial);
-            $datetime2 = new DateTime($fechaFinal);
-            $fechahoy = new DateTime("now");
-
-            if( ($fechahoy > $datetime2) || ($fechahoy < $datetime1)){
+            // Verificar si hay un período activo
+            $periodoActivo = $this->obtenerPeriodoActivo();
+            
+            if (!$periodoActivo) {
+                // No hay período activo, redirigir a la vista de período inactivo
                 return $this->redirect()->toRoute("administracionHome/administracion", ["action" => "periodoInactivo"]);
             }
-
+            
+            // Si hay período activo, verificar que no haya expirado (verificación adicional por si acaso)
+            date_default_timezone_set('America/Guatemala');
+            $fechaHoraActual = new DateTime("now");
+            $fechaExpiracion = new DateTime($periodoActivo['fecha_fin'] . " " . $periodoActivo['hora_fin']);
+            
+            if ($fechaHoraActual > $fechaExpiracion) {
+                // El período ya expiró, redirigir a período inactivo
+                return $this->redirect()->toRoute("administracionHome/administracion", ["action" => "periodoInactivo"]);
+            }
         }
 
         if ($nombreAccion != 'accesoDenegado' && $nombreAccion != 'periodoInactivo' && $nombreAccion != 'premios' && $nombreAccion !='formacionAcademica' && $nombreAccion !='cargos' && $nombreAccion !='investigaciones' && $nombreAccion !='capacitacionProfesional' && $nombreAccion != 'solicitudes' && $nombreAccion != 'misSolicitudes' &&  $nombreAccion != 'configuracion' && $nombreAccion != 'reportes' && $nombreAccion != 'admSolicitudes' && $nombreAccion !='displayfile' && $authManager->verificarPermiso($nombreControlador, $nombreAccion) != true) {
@@ -116,31 +116,11 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         header('Accept-Ranges: bytes');
         @readfile($file);
         die;
-        
-        
-        /*echo $content;
-
-
-        $file = getcwd() . '/archivos_privado/mi_archivo.pdf';
-        $filename = 'mi_archivo.pdf';
-        header('Content-type: application/pdf');
-        header('Content-Disposition: inline; filename="' . $filename . '"');
-        header('Content-Transfer-Encoding: binary');
-        header('Content-Length: ' . filesize($file));
-        header('Accept-Ranges: bytes');
-        @readfile($file);
-        die;*/
-
     }
 
 
     public function sendEmail($email,$nameUser, $estado){
         $mailManager = new \Utilidades\Service\MailManager();
-        /*$htmlMail = ("Estimado {$nameUser}, 
-                    <br><br>Le informamos que su solicitud de mérito academico ha sido {$estado}.
-                    <br><br>Cualquier inconveniente no dudes en contactarnos.
-                    <br><br>Atentamente,
-                    ");*/
 
         $htmlMail = ('<!DOCTYPE html>
         <html lang="en" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
@@ -471,23 +451,19 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
             return $this->redirect()->toRoute('home');
         }
+
         //cambiar al layout administrativo...
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
-
         
+        // Obtenemos el periodo activo para validaciones
+        $periodoActivo = $this->obtenerPeriodoActivo();
+   
         $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
         $fileManager = new \Utilidades\Service\FileManager();
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
-
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
         
-        
-        
-
         if ($this->getRequest()->isPost()) {
 
             $params = $this->params()->fromPost();
@@ -512,7 +488,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 }
 
                 $result = $premiosTable->update($params, ["id_premio" => $idSolicitud]);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se edito la solicitud de premios con id '. $idSolicitud);
                     $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                 } else {
@@ -534,25 +510,30 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
     
                 $result = $premiosTable->insert($params);
         
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: premios');
                     $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                     
                 } else {
                     $this->saveLog($id_usuario, 'Error al realizar la solicitud');
                     $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.'); 
-                    
                 }
-                
             }
         }
 
 
         if($idSolicitud == 0){
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "periodoActivo" => $periodoActivo
+            ]);
         }else{
             $solicitud = $premiosTable->getPremiosById($id_usuario, $idSolicitud);
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "dataedit" => $solicitud, 
+                "periodoActivo" => $periodoActivo
+            ]);
         }
         
     }
@@ -566,14 +547,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
+        // Obtenemos el periodo activo para validaciones
+        $periodoActivo = $this->obtenerPeriodoActivo();
+
         $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
         $fileManager = new \Utilidades\Service\FileManager();
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
-
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
 
         if ($this->getRequest()->isPost()) {
 
@@ -599,10 +579,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 }else if($params['categoria'] == 'pensum'){
                     $params['anio_cierre_pensum'] = $params['fecha_obtencion'];
                 }
-    
-                /*$key = "url_constancia";
-                $params[$key] = $encripted_name;*/
-    
+        
                 $puntos = floatval($params["puntos"]);
                 $params["puntos"] = $puntos;
     
@@ -610,7 +587,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 unset($params['fecha_obtencion']);
 
                 $result = $formacionTable->update($params, ["id_formacion_academica" => $idSolicitud]);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se edito la solicitud de formación academica con id '. $idSolicitud);
                     $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                 } else {
@@ -642,7 +619,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 unset($params['fecha_obtencion']);
     
                 $result = $formacionTable->insert($params);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria de formación académica');
                     $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                 } else {
@@ -655,10 +632,17 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         }
 
         if($idSolicitud == 0){
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "periodoActivo" => $periodoActivo
+            ]);
         }else{
             $solicitud = $formacionTable->getFormacionAcademicaById($id_usuario, $idSolicitud);
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "dataedit" => $solicitud, 
+                "periodoActivo" => $periodoActivo
+            ]);
         }
     }
 
@@ -670,14 +654,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
+        // Obtenemos el periodo activo para validaciones
+        $periodoActivo = $this->obtenerPeriodoActivo();
+
         $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
         $fileManager = new \Utilidades\Service\FileManager();
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
-
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
 
         if ($this->getRequest()->isPost()) {
 
@@ -701,7 +684,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                     }
     
                     $result = $cargosTable->update($params, ["id_cargo" => $idSolicitud]);
-                    if ($result > 0) {
+                    if ($result->getAffectedRows() > 0) {
                         $this->saveLog($id_usuario, 'Se edito la solicitud de cargos desempeñados con id '. $idSolicitud);
                         $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                     } else {
@@ -728,7 +711,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                     $params[$key] = $encripted_name;
         
                     $result = $cargosTable->insert($params);
-                    if ($result > 0) {
+                    if ($result->getAffectedRows() > 0) {
                         $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: cargos desempeñados');
                         $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                     } else {
@@ -745,13 +728,18 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         }
 
         if($idSolicitud == 0){
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "periodoActivo" => $periodoActivo
+            ]);
         }else{
             $solicitud = $cargosTable->getCargoById($id_usuario, $idSolicitud);
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "dataedit" => $solicitud, 
+                "periodoActivo" => $periodoActivo
+            ]);
         }
-
-        //return new ViewModel(["data" => $this->authService->getIdentity()->getData()]);
     }
 
     public function investigacionesAction(){
@@ -762,15 +750,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
+        // Obtenemos el periodo activo para validaciones
+        $periodoActivo = $this->obtenerPeriodoActivo();
+
         $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
         $fileManager = new \Utilidades\Service\FileManager();
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
-
-
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
 
         if ($this->getRequest()->isPost()) {
 
@@ -792,7 +778,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 }
 
                 $result = $investigacionesTable->update($params, ["id_investigacion" => $idSolicitud]);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se edito la solicitud de investigaciones/publicaciones con id '. $idSolicitud);
                     $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                 } else {
@@ -813,7 +799,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $params[$key] = $encripted_name;
     
                 $result = $investigacionesTable->insert($params);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: Investigaciones/publicaciones');
                     $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                 } else {
@@ -824,12 +810,18 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
         }
 
-       
         if($idSolicitud == 0){
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "periodoActivo" => $periodoActivo
+            ]);
         }else{
             $solicitud = $investigacionesTable->getInvestigacionesById($id_usuario, $idSolicitud);
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "dataedit" => $solicitud, 
+                "periodoActivo" => $periodoActivo
+            ]);
         }
     }
 
@@ -841,14 +833,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
+        // Obtenemos el periodo activo para validaciones
+        $periodoActivo = $this->obtenerPeriodoActivo();
+
         $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
         $fileManager = new \Utilidades\Service\FileManager();
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
-
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
 
         if ($this->getRequest()->isPost()) {
 
@@ -870,7 +861,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 }
 
                 $result = $capacitacionTable->update($params, ["id_capacitacion" => $idSolicitud]);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se edito la solicitud de capacitación profesional con id '. $idSolicitud);
                     $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                 } else {
@@ -892,7 +883,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
     
                 $result = $capacitacionTable->insert($params);
                 
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: capacitación profesional');
                     $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                 } else {
@@ -904,11 +895,17 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         }
 
         if($idSolicitud == 0){
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "periodoActivo" => $periodoActivo
+            ]);
         }else{
             $solicitud = $capacitacionTable->getCapacitacionById($id_usuario, $idSolicitud);
-            //var_dump($solicitud);
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "dataedit" => $solicitud, 
+                "periodoActivo" => $periodoActivo
+            ]);
         }
     }
 
@@ -921,6 +918,15 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
+        // Verificar período activo
+        $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
+        $periodoActivo = $periodosTable->getPeriodoActivo();
+        
+        if (empty($periodoActivo)) {
+            $this->flashMessenger()->addErrorMessage('No hay un período activo configurado.');
+            return $this->redirect()->toRoute("administracionHome/administracion", ["action" => "configuracion"]);
+        }
+
         // Obtener filtro de categoría de la URL
         $categoriaFiltro = $this->params()->fromRoute('val1', 'todas'); 
 
@@ -931,30 +937,30 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $formacionList = [];
         $investigaciones = [];
 
-        // Obtener TODOS los datos según el filtro de categoría (sin filtro por estado)
+        // Obtener datos del PERÍODO ACTIVO según el filtro de categoría
         if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'premios') {
             $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
-            $premios = $premiosTable->getPremios();
+            $premios = $premiosTable->getPremiosPeriodoActual();
         }
 
         if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'cargos') {
             $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
-            $cargos = $cargosTable->getCargos();
+            $cargos = $cargosTable->getCargosPeriodoActual();
         }
 
         if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'capacitacion') {
             $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
-            $capacitacionList = $capacitacionTable->getCapacitacionProfesional();
+            $capacitacionList = $capacitacionTable->getCapacitacionProfesionalPeriodoActual();
         }
 
         if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'formacion') {
             $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
-            $formacionList = $formacionTable->getFormacionAcademica();
+            $formacionList = $formacionTable->getFormacionAcademicaPeriodoActual(); 
         }
 
         if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'investigaciones') {
             $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
-            $investigaciones = $investigacionesTable->getInvestigaciones();
+            $investigaciones = $investigacionesTable->getInvestigacionesPeriodoActual();
         }
 
         return new ViewModel([
@@ -964,7 +970,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             "capacitacion" => $capacitacionList, 
             "formacion" => $formacionList, 
             "investigaciones" => $investigaciones,
-            "categoriaActual" => $categoriaFiltro
+            "categoriaActual" => $categoriaFiltro,
+            "periodoActivo" => $periodoActivo[0]
         ]);
     }
 
@@ -977,25 +984,30 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
+        $usuario = $this->authService->getIdentity()->getData()["usuario"];
 
-        //Obtenemos todos los méritos académicos por usuario
+        $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
+        $periodoActivo = $periodosTable->getPeriodoActivo();
+        $puedeSubir = $periodosTable->isPeriodoActivo();
+
+        //Obtenemos todos los méritos académicos por usuario del PERÍODO ACTIVO
         $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
-        $misPremios = $premiosTable->getPremiosByUser($this->authService->getIdentity()->getData()["usuario"]);
+        $misPremios = $premiosTable->getPremiosByUserPeriodoActual($usuario);
 
         $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
-        $misCargos = $cargosTable->getCargosByUser($this->authService->getIdentity()->getData()["usuario"]);
+        $misCargos = $cargosTable->getCargosByUserPeriodoActual($usuario);
 
         $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
-        $misCapacitaciones = $capacitacionTable->getCapacitacionProfesionalByUser($this->authService->getIdentity()->getData()["usuario"]);
+        $misCapacitaciones = $capacitacionTable->getCapacitacionProfesionalByUserPeriodoActual($usuario);
         
         $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
-        $miformacionacademica = $formacionTable->getFormacionAcademicaByUser($this->authService->getIdentity()->getData()["usuario"]);
+        $miformacionacademica = $formacionTable->getFormacionAcademicaByUserPeriodoActual($usuario);
         
         $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
-        $misInvestigaciones = $investigacionesTable->getInvestigacionesByUser($this->authService->getIdentity()->getData()["usuario"]);
+        $misInvestigaciones = $investigacionesTable->getInvestigacionesByUserPeriodoActual($usuario);
         
         $puntosTable = new \ORM\Model\Entity\PuntosTable($this->adapter);
-        $misPuntos = $puntosTable->getPuntosByUser($this->authService->getIdentity()->getData()["usuario"]);
+        $misPuntos = $puntosTable->getPuntosByUser($usuario);
         
         $puntajeActual = $misPuntos ? floatval($misPuntos[0]["capacitacion_profesional"]) + floatval($misPuntos[0]["formacion_academica"]) + floatval($misPuntos[0]["premios"]) + floatval($misPuntos[0]["investigaciones"]) + floatval($misPuntos[0]["cargos"]) : 0;
         
@@ -1007,7 +1019,18 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 "formacion_academica" => "0" ]);
         }
 
-        return new ViewModel(["data" => $this->authService->getIdentity()->getData(),  "premios"=> $misPremios, "cargos"=> $misCargos, "formacionAcademica" => $miformacionacademica, "capacitacionProfesional"=> $misCapacitaciones, "investigaciones"=>  $misInvestigaciones, "miPuntaje" =>$puntajeActual, "puntos" => $misPuntos]);
+        return new ViewModel([
+            "data" => $this->authService->getIdentity()->getData(),  
+            "premios"=> $misPremios, 
+            "cargos"=> $misCargos, 
+            "formacionAcademica" => $miformacionacademica, 
+            "capacitacionProfesional"=> $misCapacitaciones, 
+            "investigaciones"=>  $misInvestigaciones, 
+            "miPuntaje" =>$puntajeActual, 
+            "puntos" => $misPuntos,
+            "periodoActivo" => !empty($periodoActivo) ? $periodoActivo[0] : null,
+            "puedeSubir" => $puedeSubir
+        ]);
     }
 
 
@@ -1027,9 +1050,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $cargosTable->getSolicitud($id_solicitud);
 
-        //var_dump($solicitud);
-
-        // NUEVO: Manejar edición de estado
         if ($this->params()->fromPost("action") == "editarEstado") {
             $nuevoEstado = $this->params()->fromPost("nuevo_estado");
             $motivoCambio = $this->params()->fromPost("motivo_cambio");
@@ -1153,7 +1173,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $premiosTable->getSolicitud($id_solicitud);
 
-        // NUEVO: Manejar edición de estado
         if ($this->params()->fromPost("action") == "editarEstado") {
             $nuevoEstado = $this->params()->fromPost("nuevo_estado");
             $motivoCambio = $this->params()->fromPost("motivo_cambio");
@@ -1234,15 +1253,9 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                     if($nuevoPuntaje >= 2){
                         $nuevoPuntaje = 2;
                     }else{
-                        $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);;
+                        $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
                     }
-                    /* //modificado a solicitud de CEDA 2025-02-19 17:00
 
-                    if($auxPts >= floatval($puntosActuales)){
-                        $nuevoPuntaje = $auxPts;
-                    }else{
-                        $nuevoPuntaje = $puntosActuales;
-                    }*/
                     $params = array( "premios" => $nuevoPuntaje,
                     "year"=>$year);
                     $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
@@ -1285,9 +1298,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $capacitacionTable->getSolicitud($id_solicitud);
-        //var_dump($solicitud);
 
-        // NUEVO: Manejar edición de estado
         if ($this->params()->fromPost("action") == "editarEstado") {
             $nuevoEstado = $this->params()->fromPost("nuevo_estado");
             $motivoCambio = $this->params()->fromPost("motivo_cambio");
@@ -1427,7 +1438,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $formacionTable->getSolicitud($id_solicitud);
 
-        // NUEVO: Manejar edición de estado
         if ($this->params()->fromPost("action") == "editarEstado") {
             $nuevoEstado = $this->params()->fromPost("nuevo_estado");
             $motivoCambio = $this->params()->fromPost("motivo_cambio");
@@ -1447,7 +1457,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             
             if ($result > 0) {
                 // Manejar puntos según el cambio de estado
-                $this->manejarCambioPuntos($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado);
+                $this->manejarCambioPuntosFormacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado);
                 
                 // Registrar en log
                 $estadoTexto = $this->getEstadoTexto($nuevoEstado);
@@ -1466,8 +1476,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             }
         }
 
-        // ... resto del código existente para "rechazar" y "aceptar" ...
-
         if ($this->params()->fromPost("action") == "rechazar") {
             $params = $this->params()->fromPost();
             $params['id_estado'] = '3';
@@ -1480,7 +1488,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $formacionTable->update($params, ["id_formacion_academica" => $id_solicitud]);
                 
             if ($result > 0) {
-                //$this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de formación profesional con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
@@ -1530,6 +1537,44 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         }
 
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
+    }
+
+    // Método auxiliar para manejar puntos de FORMACIÓN ACADÉMICA
+    private function manejarCambioPuntosFormacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado) {
+        $year = date("Y");
+        $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+        $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["formacion_academica"]) : 0;
+
+        // Si cambia de Aceptada (2) a Rechazada (3) o Ingresada (1) -> QUITAR puntos
+        if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
+            $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["formacion_academica" => $nuevosPuntos, "year" => $year],
+                    ["id_usuario" => $id_usuario]
+                );
+            }
+        }
+        
+        // Si cambia de Rechazada (3) o Ingresada (1) a Aceptada (2) -> AGREGAR puntos
+        if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
+            // Para formación académica se toma el mayor valor, no se suman
+            $nuevoPuntaje = max($puntosUsuario, $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["formacion_academica" => $nuevoPuntaje, "year" => $year],
+                    ["id_usuario" => $id_usuario]
+                );
+            } else {
+                $puntosTable->insert([
+                    "formacion_academica" => $puntosActuales,
+                    "id_usuario" => $id_usuario,
+                    "year" => $year
+                ]);
+            }
+        }
     }
 
     // Método auxiliar para manejar puntos de PREMIOS
@@ -1717,7 +1762,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $investigacionesTable->getSolicitud($id_solicitud);
 
-        // NUEVO: Manejar edición de estado
         if ($this->params()->fromPost("action") == "editarEstado") {
             $nuevoEstado = $this->params()->fromPost("nuevo_estado");
             $motivoCambio = $this->params()->fromPost("motivo_cambio");
@@ -1853,40 +1897,312 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
     }
 
+    private function obtenerPeriodoActivo() {
+        $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
+        
+        // Primero verificar períodos expirados
+        $this->verificarYActualizarPeriodosExpirados();
+        
+        $sql = $periodosTable->getSql();
+        $select = $sql->select();
+        $select->where(['estado' => 'activo']);
+        $select->order('fecha_fin DESC');
+        $select->limit(1);
+        
+        $periodoActivo = $periodosTable->selectWith($select)->toArray();
+        
+        return !empty($periodoActivo) ? $periodoActivo[0] : null;
+    }
+
+    // Verificar y actualizar períodos expirados
+    private function verificarYActualizarPeriodosExpirados() {
+        $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
+        
+        date_default_timezone_set('America/Guatemala');
+        $fechaHoraActual = new DateTime("now");
+        
+        // Obtener períodos activos que podrían haber expirado
+        $sql = $periodosTable->getSql();
+        $select = $sql->select();
+        $select->where(['estado' => 'activo']);
+        
+        $periodosActivos = $periodosTable->selectWith($select)->toArray();
+        
+        $periodosCerradosAutomaticamente = 0;
+        
+        foreach ($periodosActivos as $periodo) {
+            // Construir fecha y hora de expiración
+            $fechaFin = $periodo['fecha_fin'] . " " . $periodo['hora_fin'];
+            $fechaExpiracion = new DateTime($fechaFin);
+            
+            // Si el período ha expirado, cambiarlo a cerrado
+            if ($fechaHoraActual > $fechaExpiracion) {
+                try {
+                    // Actualizar el estado a cerrado
+                    $sqlUpdate = $periodosTable->getSql();
+                    $update = $sqlUpdate->update();
+                    $update->set(['estado' => 'cerrado']);
+                    $update->where(['id_periodo' => $periodo['id_periodo']]);
+                    $statement = $sqlUpdate->prepareStatementForSqlObject($update);
+                    $statement->execute();
+                    
+                    // Log del cambio automático
+                    $usuario = $this->authService->hasIdentity() && $this->authService->getIdentity()->getData() 
+                            ? $this->authService->getIdentity()->getData()["usuario"] 
+                            : 'SYSTEM';
+                    
+                    $this->saveLog(
+                        $usuario, 
+                        "Se cerró automáticamente el período '{$periodo['nombre']}' (ID: {$periodo['id_periodo']}) por expiración de fecha/hora. Expiró: {$fechaFin}"
+                    );
+                    
+                    $periodosCerradosAutomaticamente++;
+                    
+                } catch (\Exception $e) {
+                    // Log del error si algo falla
+                    error_log("Error al cerrar período automáticamente ID {$periodo['id_periodo']}: " . $e->getMessage());
+                }
+            }
+        }
+        
+        // Si se cerraron períodos automáticamente, mostrar mensaje informativo
+        if ($periodosCerradosAutomaticamente > 0) {
+            $mensaje = $periodosCerradosAutomaticamente == 1 
+                    ? "Se cerró automáticamente 1 período por expiración de fecha/hora."
+                    : "Se cerraron automáticamente {$periodosCerradosAutomaticamente} períodos por expiración de fecha/hora.";
+            
+            $this->flashMessenger()->addInfoMessage($mensaje);
+        }
+        
+        return $periodosCerradosAutomaticamente;
+    }
+
+    /**
+     * Valida si un período tiene méritos asociados
+     * @param int $periodoId
+     * @return bool
+     */
+    private function validarMeritosPeriodo($periodoId)
+    {
+        $tablas = ['formacion_academica', 'premios', 'cargos', 'investigaciones', 'capacitacion_profesional'];
+        
+        foreach ($tablas as $tabla) {
+            try {
+                $sql = "SELECT 1 FROM {$tabla} WHERE id_periodo = ? LIMIT 1";
+                $statement = $this->adapter->createStatement($sql);
+                $result = $statement->execute([$periodoId]);
+                
+                // Si encuentra al menos 1 registro, tiene méritos
+                if ($result->current()) {
+                    return true;
+                }
+            } catch (\Exception $e) {
+                // Si hay error con una tabla, continúa con las demás
+                continue;
+            }
+        }
+        
+        return false;
+    }
 
     //Configuracion 
     public function configuracionAction(){
         if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
             return $this->redirect()->toRoute('home');
         }
+        
+        // VERIFICAR PERÍODOS EXPIRADOS AL CARGAR LA PÁGINA
+        $this->verificarYActualizarPeriodosExpirados();
+        
         //cambiar al layout administrativo...
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
         $id_admin = $this->authService->getIdentity()->getData()["usuario"];
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-
-        $settings = $configuracionTable->getConfiguracion();
-
-        $params = $this->params()->fromPost();
         
-        if ($this->getRequest()->isPost()) {
-            $params = $this->params()->fromPost();
-            
-            $result = (!$settings) ? $configuracionTable->insert($params) : $configuracionTable->update($params);
-            //var_dump($result);
-            
-            if ($result > 0) {
-                $settings = $configuracionTable->getConfiguracion();
-                $this->saveLog($id_admin, 'Se actualizó la configuración general: ' . $params['nota']);
-                $this->flashMessenger()->addSuccessMessage('Configuración guardada con éxito');
-            } else {
-                $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
-            }
+        // MANEJO DE PERÍODOS
+        $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
 
+        if ($this->getRequest()->isPost()) {
+            $action = $this->getRequest()->getPost('action');
+            
+            try {
+                switch ($action) {
+                    case 'crear_periodo':
+                        $data = [
+                            'nombre' => $this->getRequest()->getPost('nombre'),
+                            'descripcion' => $this->getRequest()->getPost('descripcion'),
+                            'fecha_inicio' => $this->getRequest()->getPost('fecha_inicio'),
+                            'fecha_fin' => $this->getRequest()->getPost('fecha_fin'),
+                            'hora_inicio' => $this->getRequest()->getPost('hora_inicio') ?: '00:00:00',
+                            'hora_fin' => $this->getRequest()->getPost('hora_fin') ?: '23:59:59',
+                            'estado' => $this->getRequest()->getPost('activar_ahora') ? 'activo' : 'inactivo'
+                        ];
+                        
+                        // Validar fechas
+                        if (strtotime($data['fecha_inicio']) >= strtotime($data['fecha_fin'])) {
+                            throw new \Exception("La fecha de fin debe ser posterior a la fecha de inicio.");
+                        }
+                        
+                        // Si se va a activar, desactivar solo períodos activos (no los cerrados)
+                        if ($data['estado'] === 'activo') {
+                            $sql = $periodosTable->getSql();
+                            $update = $sql->update();
+                            $update->set(['estado' => 'inactivo']);
+                            $update->where(['estado' => 'activo']);
+                            $statement = $sql->prepareStatementForSqlObject($update);
+                            $statement->execute();
+                        }
+                        
+                        $periodosTable->insert($data);
+                        $this->saveLog($id_admin, 'Se creó un nuevo período: ' . $data['nombre']);
+                        $this->flashMessenger()->addSuccessMessage('Período creado exitosamente.');
+                        break;
+                        
+                    case 'activar_periodo':
+                        $periodo_id = $this->getRequest()->getPost('periodo_id');
+                        
+                        // Solo desactivar períodos activos
+                        $sql = $periodosTable->getSql();
+                        $update = $sql->update();
+                        $update->set(['estado' => 'inactivo']);
+                        $update->where(['estado' => 'activo']);
+                        $statement = $sql->prepareStatementForSqlObject($update);
+                        $statement->execute();
+                        
+                        // Activar el período seleccionado
+                        $sql2 = $periodosTable->getSql();
+                        $update2 = $sql2->update();
+                        $update2->set(['estado' => 'activo']);
+                        $update2->where(['id_periodo' => $periodo_id]);
+                        $statement2 = $sql2->prepareStatementForSqlObject($update2);
+                        $statement2->execute();
+                        
+                        $this->saveLog($id_admin, 'Se activó el período ID: ' . $periodo_id);
+                        $this->flashMessenger()->addSuccessMessage('Período activado exitosamente.');
+                        break;
+                        
+                    case 'editar_periodo':
+                        $periodo_id = $this->getRequest()->getPost('periodo_id');
+                        $data = [
+                            'nombre' => $this->getRequest()->getPost('nombre'),
+                            'descripcion' => $this->getRequest()->getPost('descripcion'),
+                            'fecha_inicio' => $this->getRequest()->getPost('fecha_inicio'),
+                            'fecha_fin' => $this->getRequest()->getPost('fecha_fin'),
+                            'hora_inicio' => $this->getRequest()->getPost('hora_inicio') ?: '00:00:00',
+                            'hora_fin' => $this->getRequest()->getPost('hora_fin') ?: '23:59:59'
+                        ];
+                        
+                        if (strtotime($data['fecha_inicio']) >= strtotime($data['fecha_fin'])) {
+                            throw new \Exception("La fecha de fin debe ser posterior a la fecha de inicio.");
+                        }
+                        
+                        // Actualizar usando SQL directo
+                        $sql = $periodosTable->getSql();
+                        $update = $sql->update();
+                        $update->set($data);
+                        $update->where(['id_periodo' => $periodo_id]);
+                        $statement = $sql->prepareStatementForSqlObject($update);
+                        $statement->execute();
+                        
+                        $this->saveLog($id_admin, 'Se editó el período ID: ' . $periodo_id);
+                        $this->flashMessenger()->addSuccessMessage('Período actualizado exitosamente.');
+                        break;
+                        
+                    case 'cerrar_periodo':
+                        $periodo_id = $this->getRequest()->getPost('periodo_id');
+                        
+                        $sql = $periodosTable->getSql();
+                        $update = $sql->update();
+                        $update->set(['estado' => 'cerrado']);
+                        $update->where(['id_periodo' => $periodo_id]);
+                        $statement = $sql->prepareStatementForSqlObject($update);
+                        $statement->execute();
+                        
+                        $this->saveLog($id_admin, 'Se cerró el período ID: ' . $periodo_id);
+                        $this->flashMessenger()->addSuccessMessage('Período cerrado exitosamente.');
+                        break;
+                        
+                    case 'eliminar_periodo':
+                        $periodo_id = $this->getRequest()->getPost('periodo_id');
+                        
+                        // Verificar que no tenga méritos asociados
+                        $tieneMeritos = false;
+                        $detalleMeritos = [];
+                        $totalMeritos = 0;
+                        
+                        // Verificar en todas las tablas de méritos
+                        $tablas = [
+                            'formacion_academica' => 'Formación Académica',
+                            'premios' => 'Premios',
+                            'cargos' => 'Cargos',
+                            'investigaciones' => 'Investigaciones',
+                            'capacitacion_profesional' => 'Capacitación Profesional'
+                        ];
+                        
+                        foreach ($tablas as $tabla => $categoria) {
+                            try {
+                                // Crear la consulta para cada tabla
+                                $sql = "SELECT COUNT(*) as count FROM {$tabla} WHERE id_periodo = ?";
+                                $statement = $this->adapter->createStatement($sql);
+                                $result = $statement->execute([$periodo_id]);
+                                $row = $result->current();
+                                
+                                if ($row['count'] > 0) {
+                                    $tieneMeritos = true;
+                                    $detalleMeritos[] = "{$categoria}: {$row['count']} mérito(s)";
+                                    $totalMeritos += $row['count'];
+                                }
+                            } catch (\Exception $e) {
+                                // Continuar con la siguiente tabla si hay error
+                                continue;
+                            }
+                        }
+                        
+                        if ($tieneMeritos) {
+                            // Construir mensaje detallado
+                            $mensajeDetalle = implode('<br>• ', $detalleMeritos);
+                            $mensajeCompleto = "No se puede eliminar este período porque tiene <strong>{$totalMeritos} mérito(s)</strong> asociado(s):<br><br>• {$mensajeDetalle}<br><br>Solo se pueden eliminar períodos sin méritos asociados.";
+                            
+                            $this->flashMessenger()->addErrorMessage($mensajeCompleto);
+                            $this->saveLog($id_admin, "Intento fallido de eliminar período ID: {$periodo_id} - Tiene {$totalMeritos} méritos asociados");
+                        } else {
+                            // Si no tiene méritos, proceder con la eliminación
+                            $sql = $periodosTable->getSql();
+                            $update = $sql->update();
+                            $update->set(['estado' => 'eliminado']);
+                            $update->where(['id_periodo' => $periodo_id]);
+                            $statement = $sql->prepareStatementForSqlObject($update);
+                            $result = $statement->execute();
+                            
+                            $this->saveLog($id_admin, 'Se eliminó el período ID: ' . $periodo_id);
+                            $this->flashMessenger()->addSuccessMessage('Período eliminado exitosamente.');
+                        }
+                        break;
+                    default:
+                        throw new \Exception("Acción no válida.");
+                }
+                
+            } catch (\Exception $e) {
+                $this->flashMessenger()->addErrorMessage($e->getMessage());
+            }
+            
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "configuracion"]);
         }
 
-        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "settings" => $settings]);
+        // Obtener todos los períodos (después de la verificación automática)
+        $periodos = $periodosTable->getAllPeriodos();
+
+        // Validar méritos asociados para cada período
+        foreach ($periodos as &$periodo) {
+            $periodo['tiene_meritos'] = $this->validarMeritosPeriodo($periodo['id_periodo']);
+            $periodo['puede_eliminar'] = !$periodo['tiene_meritos'];
+        }
+
+        return new ViewModel([
+            'data' => $this->authService->getIdentity()->getData(),
+            'periodos' => $periodos,
+        ]);
     }
 
     public function reportesAction(){
