@@ -104,6 +104,26 @@ class PremiosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
     }
 
     /**
+     * Obtener premios de un año específico con datos del usuario
+     */
+    public function getPremiosAño($año, $estado = null)
+    {
+        $select = $this->getSql()->select();
+        $select->join(['u' => 'usuario'], 'premios.id_usuario = u.usuario', ['nombre', 'grado_academico']);
+        $select->join(['e' => 'estado'], 'e.id_estado = premios.id_estado');
+        $select->where->expression('YEAR(premios.created_at) = ?', [$año]);
+        
+        if ($estado !== null && $estado !== 'todos') {
+            $select->where->equalTo('premios.id_estado', $estado);
+        }
+        
+        $select->order(['premios.created_at' => 'DESC']);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
+    /**
      * Obtener premios de un período específico
      */
     public function getPremiosPorPeriodo($idPeriodo)

@@ -1,0 +1,194 @@
+<?php
+// filepath: /home/samuelzea/Projects/Ceda/module/Meritos/view/meritos/index/historial.phtml
+
+$this->headTitle('Historial de Méritos');
+?>
+
+<div class="container-fluid">
+
+    <!-- Page Heading -->
+    <h1 class="h3 mb-2 text-gray-800">Historial de Méritos</h1>
+
+    <!-- Filtros -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Filtros</h6>
+        </div>
+        <div class="card-body">
+            <form method="GET" action="<?= $this->url('meritosHome/meritos', ['action' => 'historial']) ?>" class="row">
+                <div class="col-md-3">
+                    <label for="año">Año:</label>
+                    <select class="form-control" id="año" name="año" onchange="this.form.submit()">
+                        <?php foreach ($añosDisponibles as $año): ?>
+                            <option value="<?= $año ?>" <?= $añoActual == $año ? 'selected' : '' ?>>
+                                <?= $año ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="estado">Estado:</label>
+                    <select class="form-control" id="estado" name="estado" onchange="this.form.submit()">
+                        <option value="todos" <?= $estadoActual === 'todos' ? 'selected' : '' ?>>Todos</option>
+                        <option value="ingresada" <?= $estadoActual === 'ingresada' ? 'selected' : '' ?>>Ingresada</option>
+                        <option value="aceptada" <?= $estadoActual === 'aceptada' ? 'selected' : '' ?>>Aceptada</option>
+                        <option value="rechazada" <?= $estadoActual === 'rechazada' ? 'selected' : '' ?>>Rechazada</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label for="categoria">Categoría:</label>
+                    <select class="form-control" id="categoria" name="categoria" onchange="this.form.submit()">
+                        <option value="todas" <?= $categoriaActual === 'todas' ? 'selected' : '' ?>>Todas</option>
+                        <option value="premios" <?= $categoriaActual === 'premios' ? 'selected' : '' ?>>Premios</option>
+                        <option value="formacion" <?= $categoriaActual === 'formacion' ? 'selected' : '' ?>>Formación</option>
+                        <option value="cargos" <?= $categoriaActual === 'cargos' ? 'selected' : '' ?>>Cargos</option>
+                        <option value="capacitacion" <?= $categoriaActual === 'capacitacion' ? 'selected' : '' ?>>Capacitación</option>
+                        <option value="investigaciones" <?= $categoriaActual === 'investigaciones' ? 'selected' : '' ?>>Investigaciones</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3 d-flex align-items-end">
+                    <a href="<?= $this->url('meritosHome/meritos', ['action' => 'historial']) ?>" class="btn btn-secondary btn-block">
+                        Limpiar Filtros
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- DataTable -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Historial de Méritos</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped dtable" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Fecha de solicitud</th>
+                            <th>Nombre Docente</th>
+                            <th>Grado academico</th>
+                            <th>Tipo de solicitud</th>
+                            <th>Estado de solicitud</th>
+                            <th>Puntos</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($premios as $item): ?>
+                            <tr>
+                                <td><?= date('d/m/Y', strtotime($item['created_at'])) ?></td>
+                                <td><?= $this->escapeHtml($item['nombre']) ?></td>
+                                <td><?= $this->escapeHtml($item['grado_academico']) ?></td>
+                                <td>Premios</td>
+                                <td><?= obtenerBadgeEstado($item['id_estado']) ?></td>
+                                <td><?= $this->escapeHtml($item['puntos']) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+
+                        <?php foreach ($formacion as $item): ?>
+                            <tr>
+                                <td><?= date('d/m/Y', strtotime($item['created_at'])) ?></td>
+                                <td><?= $this->escapeHtml($item['nombre']) ?></td>
+                                <td><?= $this->escapeHtml($item['grado_academico']) ?></td>
+                                <td>Formación</td>
+                                <td><?= obtenerBadgeEstado($item['id_estado']) ?></td>
+                                <td><?= $this->escapeHtml($item['puntos']) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+
+                        <?php foreach ($cargos as $item): ?>
+                            <tr>
+                                <td><?= date('d/m/Y', strtotime($item['created_at'])) ?></td>
+                                <td><?= $this->escapeHtml($item['nombre']) ?></td>
+                                <td><?= $this->escapeHtml($item['grado_academico']) ?></td>
+                                <td>Cargos</td>
+                                <td><?= obtenerBadgeEstado($item['id_estado']) ?></td>
+                                <td><?= $this->escapeHtml($item['puntos']) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+
+                        <?php foreach ($capacitacion as $item): ?>
+                            <tr>
+                                <td><?= date('d/m/Y', strtotime($item['created_at'])) ?></td>
+                                <td><?= $this->escapeHtml($item['nombre']) ?></td>
+                                <td><?= $this->escapeHtml($item['grado_academico']) ?></td>
+                                <td>Capacitación</td>
+                                <td><?= obtenerBadgeEstado($item['id_estado']) ?></td>
+                                <td><?= $this->escapeHtml($item['puntos']) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+
+                        <?php foreach ($investigaciones as $item): ?>
+                            <tr>
+                                <td><?= date('d/m/Y', strtotime($item['created_at'])) ?></td>
+                                <td><?= $this->escapeHtml($item['nombre']) ?></td>
+                                <td><?= $this->escapeHtml($item['grado_academico']) ?></td>
+                                <td>Investigaciones</td>
+                                <td><?= obtenerBadgeEstado($item['id_estado']) ?></td>
+                                <td><?= $this->escapeHtml($item['puntos']) ?></td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<?php
+// Función para obtener badge de estado
+function obtenerBadgeEstado($estado) {
+    switch($estado) {
+        case 1: return '<span class="badge badge-secondary">Ingresada</span>';
+        case 2: return '<span class="badge badge-success">Aceptada</span>';
+        case 3: return '<span class="badge badge-danger">Rechazada</span>';
+        default: return '<span class="badge badge-secondary">Desconocido</span>';
+    }
+}
+?>
+
+<?php
+$this->headScript()->appendScript('
+    $(document).ready(function() {
+        // Verificar si DataTables ya está inicializado
+        if ($.fn.dataTable.isDataTable("#dataTable")) {
+            // Si ya existe, destruir la instancia anterior
+            $("#dataTable").DataTable().destroy();
+        }
+
+        var configuracionEspanol = {
+            "decimal": ",",
+            "emptyTable": "No hay datos disponibles",
+            "info": "Mostrando _START_ a _END_ de _TOTAL_ entradas",
+            "infoEmpty": "Mostrando 0 a 0 de 0 entradas",
+            "infoFiltered": "(filtrado de _MAX_ entradas totales)",
+            "lengthMenu": "Mostrar _MENU_ entradas",
+            "loadingRecords": "Cargando...",
+            "processing": "Procesando...",
+            "search": "Buscar:",
+            "zeroRecords": "No se encontraron registros",
+            "paginate": {
+                "first": "Primero",
+                "last": "Último",
+                "next": "Siguiente",
+                "previous": "Anterior"
+            }
+        };
+
+        // Inicializar DataTables solo si no está ya inicializado
+        if (!$.fn.dataTable.isDataTable("#dataTable")) {
+            $("#dataTable").DataTable({
+                "language": configuracionEspanol,
+                "order": [[0, "desc"]],
+                "pageLength": 25,
+                "responsive": true,
+                "destroy": true  // Permitir reinicializar si es necesario
+            });
+        }
+    });
+');
+?>

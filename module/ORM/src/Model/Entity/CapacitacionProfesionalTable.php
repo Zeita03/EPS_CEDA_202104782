@@ -105,6 +105,26 @@ class CapacitacionProfesionalTable extends \Laminas\Db\TableGateway\AbstractTabl
     }
 
     /**
+     * Obtener capacitación profesional de un año específico con datos del usuario
+     */
+    public function getCapacitacionAño($año, $estado = null)
+    {
+        $select = $this->getSql()->select();
+        $select->join(['u' => 'usuario'], 'capacitacion_profesional.id_usuario = u.usuario', ['nombre', 'grado_academico']);
+        $select->join(['e' => 'estado'], 'e.id_estado = capacitacion_profesional.id_estado');
+        $select->where->expression('YEAR(capacitacion_profesional.created_at) = ?', [$año]);
+        
+        if ($estado !== null && $estado !== 'todos') {
+            $select->where->equalTo('capacitacion_profesional.id_estado', $estado);
+        }
+        
+        $select->order(['capacitacion_profesional.created_at' => 'DESC']);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
+    /**
      * Obtener capacitación profesional de un período específico
      */
     public function getCapacitacionProfesionalPorPeriodo($idPeriodo)

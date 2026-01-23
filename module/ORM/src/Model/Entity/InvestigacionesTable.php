@@ -105,6 +105,26 @@ class InvestigacionesTable extends \Laminas\Db\TableGateway\AbstractTableGateway
     }
 
     /**
+     * Obtener investigaciones de un año específico con datos del usuario
+     */
+    public function getInvestigacionesAño($año, $estado = null)
+    {
+        $select = $this->getSql()->select();
+        $select->join(['u' => 'usuario'], 'investigaciones.id_usuario = u.usuario', ['nombre', 'grado_academico']);
+        $select->join(['e' => 'estado'], 'e.id_estado = investigaciones.id_estado');
+        $select->where->expression('YEAR(investigaciones.created_at) = ?', [$año]);
+        
+        if ($estado !== null && $estado !== 'todos') {
+            $select->where->equalTo('investigaciones.id_estado', $estado);
+        }
+        
+        $select->order(['investigaciones.created_at' => 'DESC']);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
+    /**
      * Obtener investigaciones de un período específico
      */
     public function getInvestigacionesPorPeriodo($idPeriodo)
