@@ -231,7 +231,6 @@ function cargarDialogActualizar(data) {
   funcionActual = "update";
   $("#btn-agregar-aceptar").text("Actualizar");
   for (var k in data) {
-    console.log(data[k]);
     if (typeof data[k] !== "function") {
       $("#form-add input[name='" + k + "']").val(data[k]);
       $("#form-add select[name='" + k + "']").val(data[k]);
@@ -257,17 +256,13 @@ function cargarDialogAsignacionOpciones(data, id, id_form) {
   $(id_form + " input.id-asociacion").val(id);
   $(id_form + " input[name^='check").prop("checked", false);
   for (var k in data) {
-    //console.log(data[k]);
-    // $(id_form + " input[name='check[" + data[k] + "]'").prop('checked', true);
     $(`#${data[k]}`).prop("checked", true);
   }
   $(id_form).dialog("open");
 }
 
 function cargarInfo(data) {
-  console.log(data);
   for (var k in data) {
-    console.log(data[k]);
     if (typeof data[k] !== "function") {
       $("input[name='" + k + "']").val(data[k]);
       $("select[name='" + k + "']").val(data[k]);
