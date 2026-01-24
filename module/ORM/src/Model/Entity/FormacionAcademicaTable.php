@@ -113,6 +113,26 @@ class FormacionAcademicaTable extends \Laminas\Db\TableGateway\AbstractTableGate
     }
 
     /**
+     * Obtener formación académica de un año específico con datos del usuario
+     */
+    public function getFormacionAcademicaAño($año, $estado = null)
+    {
+        $select = $this->getSql()->select();
+        $select->join(['u' => 'usuario'], 'formacion_academica.id_usuario = u.usuario', ['nombre', 'grado_academico']);
+        $select->join(['e' => 'estado'], 'e.id_estado = formacion_academica.id_estado');
+        $select->where->expression('YEAR(formacion_academica.created_at) = ?', [$año]);
+        
+        if ($estado !== null && $estado !== 'todos') {
+            $select->where->equalTo('formacion_academica.id_estado', $estado);
+        }
+        
+        $select->order(['formacion_academica.created_at' => 'DESC']);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
+    /**
      * Obtener formación académica de un período específico
      */
     public function getFormacionAcademicaPorPeriodo($idPeriodo)

@@ -105,6 +105,26 @@ class CargosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
     }
 
     /**
+     * Obtener cargos de un año específico con datos del usuario
+     */
+    public function getCargosAño($año, $estado = null)
+    {
+        $select = $this->getSql()->select();
+        $select->join(['u' => 'usuario'], 'cargos.id_usuario = u.usuario', ['nombre', 'grado_academico']);
+        $select->join(['e' => 'estado'], 'e.id_estado = cargos.id_estado');
+        $select->where->expression('YEAR(cargos.created_at) = ?', [$año]);
+        
+        if ($estado !== null && $estado !== 'todos') {
+            $select->where->equalTo('cargos.id_estado', $estado);
+        }
+        
+        $select->order(['cargos.created_at' => 'DESC']);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
+    /**
      * Obtener cargos de un período específico
      */
     public function getCargosPorPeriodo($idPeriodo)

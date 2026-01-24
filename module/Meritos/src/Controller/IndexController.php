@@ -67,7 +67,23 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             }
         }
 
-        if ($nombreAccion != 'accesoDenegado' && $nombreAccion != 'periodoInactivo' && $nombreAccion != 'premios' && $nombreAccion !='formacionAcademica' && $nombreAccion !='cargos' && $nombreAccion !='investigaciones' && $nombreAccion !='capacitacionProfesional' && $nombreAccion != 'solicitudes' && $nombreAccion != 'misSolicitudes' &&  $nombreAccion != 'configuracion' && $nombreAccion != 'reportes' && $nombreAccion != 'admSolicitudes' && $nombreAccion !='displayfile' && $authManager->verificarPermiso($nombreControlador, $nombreAccion) != true) {
+        if (
+            $nombreAccion != 'accesoDenegado' && 
+            $nombreAccion != 'periodoInactivo' && 
+            $nombreAccion != 'premios' && 
+            $nombreAccion !='formacionAcademica' && 
+            $nombreAccion !='cargos' && 
+            $nombreAccion !='investigaciones' && 
+            $nombreAccion !='capacitacionProfesional' && 
+            $nombreAccion != 'solicitudes' && 
+            $nombreAccion != 'misSolicitudes' &&  
+            $nombreAccion != 'configuracion' && 
+            $nombreAccion != 'reportes' && 
+            $nombreAccion != 'historial' && 
+            $nombreAccion != 'admSolicitudes' && 
+            $nombreAccion !='displayfile' && 
+            $authManager->verificarPermiso($nombreControlador, $nombreAccion) != true
+        ) {
             return $this->redirect()->toRoute("administracionHome/administracion", ["action" => "accesoDenegado"]);
         }
 
@@ -2343,6 +2359,120 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
         $data = $informesTable->getInformes();
         return new ViewModel(["informes" => $data, "acceso" => $this->acceso, "data" => $this->authService->getIdentity()->getData()]);
+    }
+
+    /**
+     * Obtener años disponibles en el sistema
+     */
+    private function obtenerAñosDisponibles() {
+        $tablas = ['premios', 'cargos', 'capacitacion_profesional', 'formacion_academica', 'investigaciones'];
+        $años = [];
+
+        foreach ($tablas as $tabla) {
+            try {
+                $sql = "SELECT DISTINCT YEAR(created_at) as año FROM {$tabla} WHERE created_at IS NOT NULL ORDER BY año DESC";
+                $statement = $this->adapter->createStatement($sql);
+                $result = $statement->execute();
+                
+                foreach ($result as $row) {
+                    if ($row['año'] && !in_array($row['año'], $años)) {
+                        $años[] = $row['año'];
+                    }
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        rsort($años);
+        
+        if (empty($años)) {
+            $añoActual = date('Y');
+            for ($i = $añoActual; $i >= 2024; $i--) {
+                $años[] = $i;
+            }
+        }
+        
+        return $años;
+    }
+
+    /* Vista historial */
+    public function historialAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() || $this->authService->getIdentity()->getRol() != 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+        
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+        // Obtener filtros
+        $añoFiltro = $this->params()->fromQuery('año', date('Y'));
+        $estadoFiltro = $this->params()->fromQuery('estado', 'todos');
+        $categoriaFiltro = $this->params()->fromQuery('categoria', 'todas');
+
+        // Obtener años disponibles
+        $añosDisponibles = $this->obtenerAñosDisponibles();
+
+        // Convertir estado a ID
+        $estadoId = null;
+        if ($estadoFiltro !== 'todos') {
+            switch(strtolower($estadoFiltro)) {
+                case 'ingresada':
+                    $estadoId = 1;
+                    break;
+                case 'aceptada':
+                    $estadoId = 2;
+                    break;
+                case 'rechazada':
+                    $estadoId = 3;
+                    break;
+            }
+        }
+
+        // Obtener méritos según filtros
+        $premios = [];
+        $cargos = [];
+        $formacion = [];
+        $capacitacion = [];
+        $investigaciones = [];
+
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'premios') {
+            $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
+            $premios = $premiosTable->getPremiosAño($añoFiltro, $estadoId);
+        }
+
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'cargos') {
+            $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
+            $cargos = $cargosTable->getCargosAño($añoFiltro, $estadoId);
+        }
+
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'formacion') {
+            $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
+            $formacion = $formacionTable->getFormacionAcademicaAño($añoFiltro, $estadoId);
+        }
+
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'capacitacion') {
+            $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
+            $capacitacion = $capacitacionTable->getCapacitacionAño($añoFiltro, $estadoId);
+        }
+
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'investigaciones') {
+            $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
+            $investigaciones = $investigacionesTable->getInvestigacionesAño($añoFiltro, $estadoId);
+        }
+
+        return new ViewModel([
+            "data" => $this->authService->getIdentity()->getData(),
+            "premios" => $premios,
+            "cargos" => $cargos,
+            "formacion" => $formacion,
+            "capacitacion" => $capacitacion,
+            "investigaciones" => $investigaciones,
+            "añoActual" => $añoFiltro,
+            "estadoActual" => $estadoFiltro,
+            "categoriaActual" => $categoriaFiltro,
+            "añosDisponibles" => $añosDisponibles
+        ]);
     }
 
 }
