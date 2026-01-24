@@ -81,7 +81,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $nombreAccion != 'reportes' && 
             $nombreAccion != 'historial' && 
             $nombreAccion != 'admSolicitudes' && 
-            $nombreAccion !='displayfile' && 
+            $nombreAccion !='displayfile' &&
+            $nombreAccion !='generarConstancia' &&
             $authManager->verificarPermiso($nombreControlador, $nombreAccion) != true
         ) {
             return $this->redirect()->toRoute("administracionHome/administracion", ["action" => "accesoDenegado"]);
@@ -135,113 +136,69 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
     }
 
 
-    public function sendEmail($email,$nameUser, $estado){
+    /**
+     * Enviar constancia de méritos completados
+     */
+    public function enviarConstanciaAcademicos($email, $nombreUsuario, $datosConstancia) {
         $mailManager = new \Utilidades\Service\MailManager();
 
-        $htmlMail = ('<!DOCTYPE html>
-        <html lang="en" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
+        // Construir tabla de méritos
+        $filasMeritos = '';
+        $totalMeritos = 0;
+        
+        $meritos = [
+            'Premios' => $datosConstancia['premios'] ?? 0,
+            'Cargos Desempeñados' => $datosConstancia['cargos'] ?? 0,
+            'Formación Académica' => $datosConstancia['formacion'] ?? 0,
+            'Capacitación Profesional' => $datosConstancia['capacitacion'] ?? 0,
+            'Investigaciones/Publicaciones' => $datosConstancia['investigaciones'] ?? 0
+        ];
+
+        foreach ($meritos as $tipo => $cantidad) {
+            $totalMeritos += $cantidad;
+            $filasMeritos .= "
+            <tr>
+                <td style='padding: 12px; border: 1px solid #ddd; text-align: left;'>{$tipo}</td>
+                <td style='padding: 12px; border: 1px solid #ddd; text-align: center;'><strong>{$cantidad}</strong></td>
+            </tr>";
+        }
+
+        $htmlMail = '<!DOCTYPE html>
+        <html lang="es" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
         <head>
-            <title></title>
+            <title>Constancia de Carga de Méritos</title>
             <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
             <meta content="width=device-width,initial-scale=1" name="viewport" />
-            <link href="https://fonts.googleapis.com/css?family=Abril+Fatface" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Alegreya" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Arvo" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Bitter" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Cabin" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Ubuntu" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet" type="text/css" /><!--<![endif]-->
+            <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet" type="text/css" />
             <style>
                 * {
-                    box-sizing: border-box
+                    box-sizing: border-box;
                 }
-
                 body {
                     margin: 0;
-                    padding: 0
+                    padding: 0;
+                    -webkit-text-size-adjust: none;
+                    text-size-adjust: none;
                 }
-
                 a[x-apple-data-detectors] {
                     color: inherit !important;
-                    text-decoration: inherit !important
+                    text-decoration: inherit !important;
                 }
-
-                #MessageViewBody a {
-                    color: inherit;
-                    text-decoration: none
-                }
-
-                p {
-                    line-height: inherit
-                }
-
-                .desktop_hide,
-                .desktop_hide table {
-                    mso-hide: all;
-                    display: none;
-                    max-height: 0;
-                    overflow: hidden
-                }
-
-                @media (max-width:520px) {
-                    .desktop_hide table.icons-inner {
-                        display: inline-block !important
-                    }
-
-                    .icons-inner {
-                        text-align: center
-                    }
-
-                    .icons-inner td {
-                        margin: 0 auto
-                    }
-
-                    .row-content {
-                        width: 100% !important
-                    }
-
-                    .mobile_hide {
-                        display: none
-                    }
-
-                    .stack .column {
-                        width: 100%;
-                        display: block
-                    }
-
-                    .mobile_hide {
-                        min-height: 0;
-                        max-height: 0;
-                        max-width: 0;
-                        overflow: hidden;
-                        font-size: 0
-                    }
-
-                    .desktop_hide,
-                    .desktop_hide table {
-                        display: table !important;
-                        max-height: none !important
-                    }
-
-                    .row-2 .column-1 .block-2.heading_block td.pad {
-                        padding: 0 20px 20px !important
-                    }
+                table {
+                    border-collapse: collapse;
                 }
             </style>
         </head>
-
-        <body style="background-color:#fff;margin:0;padding:0;-webkit-text-size-adjust:none;text-size-adjust:none">
+        <body style="background-color:#fff;margin:0;padding:0;">
             <table border="0" cellpadding="0" cellspacing="0" class="nl-container" role="presentation"
                 style="mso-table-lspace:0;mso-table-rspace:0;background-color:#fff" width="100%">
                 <tbody>
                     <tr>
                         <td>
+                            <!-- HEADER -->
                             <table align="center" border="0" cellpadding="0" cellspacing="0" class="row row-1"
-                                role="presentation" style="mso-table-lspace:0;mso-table-rspace:0;background:transparent linear-gradient(180deg, #003470 0%, #041d3c 100%) 0% 0% no-repeat padding-box"
+                                role="presentation" 
+                                style="mso-table-lspace:0;mso-table-rspace:0;background:linear-gradient(180deg, #003470 0%, #041d3c 100%)"
                                 width="100%">
                                 <tbody>
                                     <tr>
@@ -253,22 +210,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                                                 <tbody>
                                                     <tr>
                                                         <td class="column column-1"
-                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:0;padding-bottom:5px;border-top:0;border-right:0;border-bottom:0;border-left:0"
+                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:20px;padding-bottom:20px"
                                                             width="100%">
-                                                            <table border="0" cellpadding="0" cellspacing="0"
-                                                                class="image_block block-1" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
-                                                                <tr>
-                                                                    <td class="pad"
-                                                                        style="padding-bottom:30px;padding-top:20px;width:100%;padding-right:0;padding-left:0">
-                                                                        <div align="center" class="alignment"
-                                                                            style="line-height:10px"><img
-                                                                                src="https://farusac.edu.gt/wp-content/uploads/2022/10/headerfarusaclogos.png"
-                                                                                style="display:block;height:auto;border:0;width:410px;max-width:100%"
-                                                                                width="410" /></div>
-                                                                    </td>
-                                                                </tr>
-                                                            </table>
+                                                            <div align="center" style="line-height:10px">
+                                                                <img src="https://farusac.edu.gt/wp-content/uploads/2022/10/headerfarusaclogos.png"
+                                                                    style="display:block;height:auto;border:0;width:410px;max-width:100%"
+                                                                    width="410" />
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -277,6 +225,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                                     </tr>
                                 </tbody>
                             </table>
+
+                            <!-- CONTENIDO PRINCIPAL -->
                             <table align="center" border="0" cellpadding="0" cellspacing="0" class="row row-2"
                                 role="presentation" style="mso-table-lspace:0;mso-table-rspace:0;background-color:#f2f2f2"
                                 width="100%">
@@ -285,77 +235,83 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                                         <td>
                                             <table align="center" border="0" cellpadding="0" cellspacing="0"
                                                 class="row-content stack" role="presentation"
-                                                style="mso-table-lspace:0;mso-table-rspace:0;background-color:#f2f2f2;border-radius:40px 0;color:#000;width:500px"
+                                                style="mso-table-lspace:0;mso-table-rspace:0;background-color:#f2f2f2;border-radius:40px 0;color:#000;width:500px;padding:30px 20px"
                                                 width="500">
                                                 <tbody>
                                                     <tr>
                                                         <td class="column column-1"
-                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:15px;padding-bottom:20px;border-top:0;border-right:0;border-bottom:0;border-left:0"
+                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding:0"
                                                             width="100%">
-                                                            <table border="0" cellpadding="0" cellspacing="0"
-                                                                class="image_block block-1" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
-                                    
-                                                            </table>
-                                                            <table border="0" cellpadding="0" cellspacing="0"
-                                                                class="heading_block block-2" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
-                                                                <tr>
-                                                                    <td class="pad"
-                                                                        style="padding-bottom:20px;text-align:center;width:100%">
-                                                                        <h1
-                                                                            style="margin:0;color:#041d3c;direction:ltr;font-family:Nunito,Arial,Helvetica Neue,Helvetica,sans-serif;font-size:25px;font-weight:400;letter-spacing:normal;line-height:120%;text-align:center;margin-top:0;margin-bottom:0">
-                                                                            <span class="tinyMce-placeholder">Estado de la solicitud</span>
-                                                                        </h1>
-                                                                    </td>
-                                                                </tr>
-                                                            </table>
-                                                            <table border="0" cellpadding="0" cellspacing="0"
-                                                                class="text_block block-3" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0;word-break:break-word"
-                                                                width="100%">
-                                                                <tr>
-                                                                    <td class="pad"
-                                                                        style="padding-bottom:20px;padding-left:20px;padding-right:20px;padding-top:10px">
-                                                                        <div style="font-family:sans-serif">
-                                                                            <div class="txtTinyMce-wrapper"
-                                                                                style="font-size:12px;font-family:Nunito,Arial,Helvetica Neue,Helvetica,sans-serif;mso-line-height-alt:18px;color:#393d47;line-height:1.5">
-                                                                                <p style="margin:0;font-size:16px"><span
-                                                                                        style="font-size:16px;">Hola ' . $nameUser . ':</span></p>
-                                                                                <p
-                                                                                    style="margin:0;font-size:16px;mso-line-height-alt:18px">
-                                                                                     </p>
-                                                                                <p style="margin:0;font-size:16px">
-                                                                                    Le informamos que su solicitud de mérito academico ha sido '. $estado . '.
-                                                                                    
-                                                                                </p>
+                                                            
+                                                            <!-- TÍTULO -->
+                                                            <h1 style="margin:20px 0 20px 0;color:#041d3c;font-family:Nunito,Arial,sans-serif;font-size:26px;font-weight:bold;text-align:center;line-height:120%;padding-top:15px">
+                                                                Constancia de Carga de Méritos Académicos
+                                                            </h1>
 
-                                                                                <p style="margin:0;font-size:16px">
-                                                                                    Cualquier inconveniente no dudes en contactarnos.
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
+                                                            <!-- SALUDO -->
+                                                            <p style="margin:0 0 15px 0;color:#333;font-family:Nunito,Arial,sans-serif;font-size:15px;line-height:160%">
+                                                                Estimado(a) <strong>' . htmlspecialchars($nombreUsuario) . '</strong>,
+                                                            </p>
+
+                                                            <!-- MENSAJE PRINCIPAL -->
+                                                            <p style="margin:0 0 15px 0;color:#555;font-family:Nunito,Arial,sans-serif;font-size:14px;line-height:160%">
+                                                                Nos complace informarle que ha <strong>completado exitosamente</strong> la carga de méritos académicos en el sistema CEDA (Comisión de Evaluación Docente de Arquitectura).
+                                                            </p>
+
+                                                            <p style="margin:0 0 20px 0;color:#555;font-family:Nunito,Arial,sans-serif;font-size:14px;line-height:160%">
+                                                                A continuación se muestra un resumen de los méritos cargados:
+                                                            </p>
+
+                                                            <!-- TABLA DE MÉRITOS -->
+                                                            <table style="width:100%;border-collapse:collapse;margin:0 0 20px 0;background:#fff;border:1px solid #ddd;border-radius:5px;overflow:hidden">
+                                                                <thead>
+                                                                    <tr style="background-color:#041d3c;color:white">
+                                                                        <th style="padding:12px;border:1px solid #ddd;text-align:left;font-weight:bold;font-family:Nunito,Arial,sans-serif;font-size:14px">
+                                                                            Tipo de Mérito
+                                                                        </th>
+                                                                        <th style="padding:12px;border:1px solid #ddd;text-align:center;font-weight:bold;font-family:Nunito,Arial,sans-serif;font-size:14px">
+                                                                            Cantidad
+                                                                        </th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    ' . $filasMeritos . '
+                                                                    <tr style="background-color:#f5f5f5;font-weight:bold">
+                                                                        <td style="padding:12px;border:1px solid #ddd;text-align:left;font-family:Nunito,Arial,sans-serif">
+                                                                            Total de Méritos
+                                                                        </td>
+                                                                        <td style="padding:12px;border:1px solid #ddd;text-align:center;color:#041d3c;font-size:16px;font-family:Nunito,Arial,sans-serif">
+                                                                            ' . $totalMeritos . '
+                                                                        </td>
+                                                                    </tr>
+                                                                </tbody>
                                                             </table>
-                                      
-                                                            <table border="0" cellpadding="0" cellspacing="0"
-                                                                class="text_block block-5" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0;word-break:break-word"
-                                                                width="100%">
-                                                                <tr>
-                                                                    <td class="pad"
-                                                                        style="padding-bottom:20px;padding-left:20px;padding-right:20px;padding-top:10px">
-                                                                        <div style="font-family:sans-serif">
-                                                                            <div class="txtTinyMce-wrapper"
-                                                                                style="font-size:12px;font-family:Nunito,Arial,Helvetica Neue,Helvetica,sans-serif;mso-line-height-alt:14.399999999999999px;color:#393d47;line-height:1.2">
-                                                                                <p style="margin:0;font-size:16px"><span
-                                                                                        style="font-size:14px;">* Nota: este correo electrónico se envió desde una dirección de correo electrónico que no acepta correo entrante. No responda a este mensaje. </span></p>
-                                                                            </div>
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
-                                                            </table>
+
+                                                            <!-- PRÓXIMOS PASOS -->
+                                                            <div style="background-color:#e7f3ff;border-left:4px solid #2196F3;padding:15px;margin:20px 0;border-radius:4px">
+                                                                <p style="margin:0 0 10px 0;color:#0c5ba7;font-family:Nunito,Arial,sans-serif;font-size:14px;font-weight:bold">
+                                                                    📋 Próximos Pasos:
+                                                                </p>
+                                                                <ul style="margin:0;padding-left:20px;color:#0c5ba7;font-family:Nunito,Arial,sans-serif;font-size:13px;line-height:180%">
+                                                                    <li>Permanezca atento a las notificaciones en su plataforma</li>
+                                                                    <li>Sus méritos serán evaluados por el comité correspondiente</li>
+                                                                    <li>Podrá visualizar el estado de cada mérito en tiempo real</li>
+                                                                    <li>Las calificaciones estarán disponibles en su dashboard</li>
+                                                                </ul>
+                                                            </div>
+
+                                                            <!-- RECORDATORIO -->
+                                                            <div style="background-color:#fff3cd;border-left:4px solid #ffc107;padding:15px;margin:20px 0;border-radius:4px">
+                                                                <p style="margin:0;color:#856404;font-family:Nunito,Arial,sans-serif;font-size:13px;line-height:160%">
+                                                                    <strong>💡 Importante:</strong> Esta constancia verifica que ha completado la carga de al menos un mérito en cada categoría dentro del período activo del sistema.
+                                                                </p>
+                                                            </div>
+
+                                                            <!-- CIERRE -->
+                                                            <p style="margin:20px 0 0 0;color:#666;font-family:Nunito,Arial,sans-serif;font-size:13px;line-height:160%;text-align:center">
+                                                                Cualquier duda o inconveniente, no dude en contactar al equipo de soporte.<br>
+                                                                <strong>Gracias por participar en el sistema CEDA</strong>
+                                                            </p>
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -364,76 +320,25 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                                     </tr>
                                 </tbody>
                             </table>
+
+                            <!-- FOOTER -->
                             <table align="center" border="0" cellpadding="0" cellspacing="0" class="row row-3"
-                                role="presentation" style="mso-table-lspace:0;mso-table-rspace:0;background:transparent linear-gradient(180deg, #003470 0%, #041d3c 100%) 0% 0% no-repeat padding-box"
+                                role="presentation" 
+                                style="mso-table-lspace:0;mso-table-rspace:0;background:linear-gradient(180deg, #003470 0%, #041d3c 100%)"
                                 width="100%">
                                 <tbody>
                                     <tr>
                                         <td>
                                             <table align="center" border="0" cellpadding="0" cellspacing="0"
                                                 class="row-content stack" role="presentation"
-                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:500px"
+                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:500px;padding:20px"
                                                 width="500">
                                                 <tbody>
                                                     <tr>
-                                                        <td class="column column-1"
-                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:5px;padding-bottom:5px;border-top:0;border-right:0;border-bottom:0;border-left:0"
-                                                            width="100%">
-                                                            <table border="0" cellpadding="15" cellspacing="0"
-                                                                class="text_block block-1" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0;word-break:break-word"
-                                                                width="100%">
-                                                                <tr>
-                                                                    <td class="pad">
-                                                                        <div style="font-family:sans-serif">
-                                                                            <div class="txtTinyMce-wrapper"
-                                                                                style="font-size:12px;font-family:Nunito,Arial,Helvetica Neue,Helvetica,sans-serif;text-align:center;mso-line-height-alt:18px;color:#fff;line-height:1.5">
-                                                                                <span style="font-size:16px;"> </span></div>
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
-                                                            </table>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <table align="center" border="0" cellpadding="0" cellspacing="0" class="row row-4"
-                                role="presentation" style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
-                                <tbody>
-                                    <tr>
-                                        <td>
-                                            <table align="center" border="0" cellpadding="0" cellspacing="0"
-                                                class="row-content stack" role="presentation"
-                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:500px"
-                                                width="500">
-                                                <tbody>
-                                                    <tr>
-                                                        <td class="column column-1"
-                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:5px;padding-bottom:5px;border-top:0;border-right:0;border-bottom:0;border-left:0"
-                                                            width="100%">
-                                                            <table border="0" cellpadding="0" cellspacing="0"
-                                                                class="icons_block block-1" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
-                                                                <tr>
-                                                                    <td class="pad"
-                                                                        style="vertical-align:middle;color:#9d9d9d;font-family:inherit;font-size:15px;padding-bottom:5px;padding-top:5px;text-align:center">
-                                                                        <table cellpadding="0" cellspacing="0"
-                                                                            role="presentation"
-                                                                            style="mso-table-lspace:0;mso-table-rspace:0"
-                                                                            width="100%">
-                                                                            <tr>
-                                                                                <td class="alignment"
-                                                                                    style="vertical-align:middle;text-align:center">
-                                                                                </td>
-                                                                            </tr>
-                                                                        </table>
-                                                                    </td>
-                                                                </tr>
-                                                            </table>
+                                                        <td style="text-align:center">
+                                                            <p style="margin:0;color:#fff;font-family:Nunito,Arial,sans-serif;font-size:11px">
+                                                                Este correo fue generado automáticamente. Por favor no responda a este mensaje.
+                                                            </p>
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -445,12 +350,101 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                         </td>
                     </tr>
                 </tbody>
-            </table><!-- End -->
+            </table>
         </body>
+        </html>';
 
-        </html>');
-    
-        $mailManager->sendGeneralMessage($email, "CEDA - Notificación estado solicitud", $htmlMail);
+        $mailManager->sendGeneralMessage($email, "CEDA - Constancia de Carga de Méritos Académicos", $htmlMail);
+    }
+
+    /**
+     * Validar si el usuario ha cargado al menos 1 mérito en cada categoría
+     */
+    private function validarMeritosPorCategoria($id_usuario) {
+        $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
+        $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
+        $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
+        $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
+        $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
+
+        // Obtener méritos del período actual para este usuario
+        $premios = $premiosTable->getPremiosByUserPeriodoActual($id_usuario);
+        $cargos = $cargosTable->getCargosByUserPeriodoActual($id_usuario);
+        $capacitacion = $capacitacionTable->getCapacitacionProfesionalByUserPeriodoActual($id_usuario);
+        $formacion = $formacionTable->getFormacionAcademicaByUserPeriodoActual($id_usuario);
+        $investigaciones = $investigacionesTable->getInvestigacionesByUserPeriodoActual($id_usuario);
+
+        // Validar que haya al menos 1 en cada categoría
+        $validaciones = [
+            'premios' => count($premios) > 0,
+            'cargos' => count($cargos) > 0,
+            'capacitacion' => count($capacitacion) > 0,
+            'formacion' => count($formacion) > 0,
+            'investigaciones' => count($investigaciones) > 0
+        ];
+
+        // Retornar datos de validación y conteos
+        return [
+            'completo' => array_reduce($validaciones, function($carry, $item) {
+                return $carry && $item;
+            }, true),
+            'validaciones' => $validaciones,
+            'conteos' => [
+                'premios' => count($premios),
+                'cargos' => count($cargos),
+                'capacitacion' => count($capacitacion),
+                'formacion' => count($formacion),
+                'investigaciones' => count($investigaciones)
+            ]
+        ];
+    }
+
+    /**
+     * Generar constancia de méritos (Acción directa - GET/POST)
+     */
+    public function generarConstanciaAction() {
+        $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
+        $userTable = new \ORM\Model\Entity\UsuarioTable($this->adapter);
+        
+        // Validar méritos
+        $validacion = $this->validarMeritosPorCategoria($id_usuario);
+
+        if (!$validacion['completo']) {
+            // Si falta algún mérito, mostrar error
+            $this->flashMessenger()->addErrorMessage('Debe cargar al menos un mérito en cada categoría para generar la constancia.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "misSolicitudes"]);
+        }
+
+        // Obtener datos del usuario
+        $usuario = $userTable->getUserById($id_usuario);
+        
+        if (empty($usuario)) {
+            $this->flashMessenger()->addErrorMessage('Usuario no encontrado.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "misSolicitudes"]);
+        }
+
+        try {
+            // Enviar correo con constancia
+            $this->enviarConstanciaAcademicos(
+                $usuario[0]['email'],
+                $usuario[0]['nombre'],
+                $validacion['conteos']
+            );
+
+            // Registrar en log
+            $this->saveLog($id_usuario, 'Se generó y envió constancia de méritos académicos al correo: ' . $usuario[0]['email']);
+
+            $this->flashMessenger()->addSuccessMessage(
+                'Constancia enviada exitosamente a ' . $usuario[0]['email'] . '. ' .
+                'Revise su bandeja de entrada y carpeta de spam.'
+            );
+
+        } catch (\Exception $e) {
+            $this->saveLog($id_usuario, 'Error al generar constancia: ' . $e->getMessage());
+            $this->flashMessenger()->addErrorMessage('Error al generar la constancia: ' . $e->getMessage());
+        }
+
+        return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "misSolicitudes"]);
     }
 
     public function saveLog($id_usuario, $accion){

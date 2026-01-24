@@ -189,7 +189,19 @@
 
 
     <!-- Page Heading -->
-    <h1 class="h3 mb-2 text-gray-800">Mis solicitudes</h1>
+    <div class="row mb-4">
+        <div class="col-6">
+            <h1 class="h3 text-gray-800">Mis solicitudes</h1>
+        </div>
+        <div class="col-6 d-flex justify-content-end align-items-center">
+            <a 
+                id="btnGenerarConstancia" 
+                class="btn btn-success btn-lg"
+                href="<?= $this->url("meritosHome/meritos", ["action" => "generarConstancia"]) ?>">
+                <i class="fas fa-file-pdf"></i> Generar Constancia
+            </a>
+        </div>
+    </div>
 
     <!-- Modal para mostrar el archivo -->
     <div class="modal fade" id="modalPdf" tabindex="-1" aria-labelledby="modalPdf" aria-hidden="true">
@@ -352,7 +364,6 @@
 
 <script>
     function cargarInfo(puntos, puntosTotales){
-        console.log(puntos);
         let premios = 2;
         let investigaciones = 6;
         let capacitacion = 8;
@@ -388,4 +399,26 @@
     }
 
     cargarInfo(<?= json_encode($this->puntos[0]) ?> , <?= $miPuntaje ?> );
+
+    // Event listener para el botón
+    document.getElementById('btnGenerarConstancia').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Mostrar confirmación
+        Swal.fire({
+            title: '📄 Generar Constancia',
+            html: '¿Desea generar y enviar la constancia de méritos a su correo electrónico?<br><small class="text-muted">Se enviará a la dirección registrada en el sistema.</small>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, generar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Si confirma, redirigir a la URL
+                window.location.href = "<?= $this->url("meritosHome/meritos", ["action" => "generarConstancia"]) ?>";
+            }
+        });
+    });
 </script> 
