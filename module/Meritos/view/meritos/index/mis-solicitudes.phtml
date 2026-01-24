@@ -1,4 +1,7 @@
-
+<?php
+$this->headLink()->appendStylesheet($this->basePath() . '/css/celebracion.css');
+$this->headScript()->appendFile($this->basePath() . '/js/celebracion.js');
+?>
 
 <div class="container-fluid">
 
@@ -416,8 +419,10 @@
             cancelButtonColor: '#6c757d'
         }).then((result) => {
             if (result.isConfirmed) {
-                // Si confirma, redirigir a la URL
-                window.location.href = "<?= $this->url("meritosHome/meritos", ["action" => "generarConstancia"]) ?>";
+                iniciarCelebracion();
+                setTimeout(() => {
+                    window.location.href = "<?= $this->url("meritosHome/meritos", ["action" => "generarConstancia"]) ?>";
+                }, 2500);
             }
         });
     });
