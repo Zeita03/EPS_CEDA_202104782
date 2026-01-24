@@ -434,10 +434,9 @@ function validateFile(input) {
 }
 
 function validarExtension(input) {
-  // var input = document.getElementById('archivo');
   var fileName = input.value;
   var extensionesPermitidas = /(\.pdf)$/i;
-  const maxSizeBytes = 5 * 1024 * 1024; // 5MB en bytes
+  const maxSize = 6 * 1024 * 1024; // 6MB - límite máximo
   const file = input.files[0];
 
   // Validar que hay un archivo seleccionado
@@ -448,8 +447,8 @@ function validarExtension(input) {
   // Validar extensión
   if (!extensionesPermitidas.exec(fileName)) {
     Swal.fire({
-      title: 'Error',
-      text: 'La extensión del archivo no está permitida. Por favor, sube un archivo PDF.',
+      title: 'Error de formato',
+      text: 'Solo se permiten archivos PDF. Por favor, convierte tu archivo.',
       icon: 'error',
       confirmButtonText: 'Aceptar',
       confirmButtonColor: '#05142b',
@@ -458,20 +457,61 @@ function validarExtension(input) {
     return false;
   }
 
-  // Validar tamaño del archivo
-  if (file.size > maxSizeBytes) {
-    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+  const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+
+  // Si el archivo excede 6MB - Sugerir compresión online
+  if (file.size > maxSize) {
     Swal.fire({
-      title: 'Archivo demasiado grande',
-      text: `El archivo seleccionado pesa ${fileSizeMB}MB. El tamaño máximo permitido es 5MB.`,
+      title: '⚠️ Archivo demasiado grande',
+      html: `<p>El archivo pesa <strong>${fileSizeMB}MB</strong>.</p>
+             <p>El límite máximo permitido es <strong>6MB</strong>.</p>
+             <hr>
+             <p><strong>📋 Por favor, comprime tu PDF usando UNA de estas herramientas gratuitas:</strong></p>
+             <div style="text-align: left; background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+               <p><strong style="color: #05142b;">🥇 Opción 1: PDF Candy (MÁS EFECTIVO)</strong></p>
+               <ol style="margin-left: 20px;">
+                 <li>Visita <a href="https://www.pdfcandy.com/es/compress-pdf.html" target="_blank" style="color: #05142b;"><u>PDF Candy</u></a></li>
+                 <li>Carga tu archivo PDF</li>
+                 <li>Espera a que se comprima</li>
+                 <li>Descarga el archivo comprimido</li>
+               </ol>
+
+               <p style="margin-top: 15px;"><strong style="color: #05142b;">🥈 Opción 2: IlovePDF</strong></p>
+               <ol style="margin-left: 20px;">
+                 <li>Visita <a href="https://www.ilovepdf.com/es/comprimir_pdf" target="_blank" style="color: #05142b;"><u>IlovePDF</u></a></li>
+                 <li>Selecciona tu PDF</li>
+                 <li>Comprime y descarga</li>
+               </ol>
+
+               <p style="margin-top: 15px;"><strong style="color: #05142b;">🥉 Opción 3: Online Converter</strong></p>
+               <ol style="margin-left: 20px;">
+                 <li>Visita <a href="https://www.onlineconverter.com/compress-pdf" target="_blank" style="color: #05142b;"><u>Online Converter</u></a></li>
+                 <li>Sube tu archivo</li>
+                 <li>Comprime y descarga</li>
+               </ol>
+             </div>
+             <hr>
+             <p style="font-size: 12px; color: #d9534f; background: #f8d7da; padding: 10px; border-radius: 4px; border-left: 4px solid #d9534f;">
+               <strong>⚠️ Nota importante:</strong> Es posible que estas herramientas no logren comprimir demasiado tu archivo, especialmente si contiene muchas imágenes de alta resolución. En ese caso, intenta:
+               <ul style="margin-top: 8px; margin-bottom: 0;">
+                 <li>Reducir la resolución de las imágenes</li>
+                 <li>Eliminar páginas innecesarias</li>
+                 <li>Probar con diferentes herramientas</li>
+                 <li>Recomendación: Elegir compresión máxima en las herramientas</li>
+               </ul>
+             </p>
+             <hr>
+             <p style="font-size: 12px; color: #666;"><strong>💡 Consejo:</strong> Intenta primero con PDF Candy, generalmente comprime más que las otras.</p>`,
       icon: 'warning',
-      confirmButtonText: 'Aceptar',
+      confirmButtonText: 'Entendido, voy a comprimir',
       confirmButtonColor: '#05142b',
+      width: '650px'
     });
     input.value = '';
     return false;
   }
 
+  // Archivo válido (menor o igual a 6MB)
   return true;
 }
 
