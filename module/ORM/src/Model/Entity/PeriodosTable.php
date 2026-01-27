@@ -36,6 +36,24 @@ class PeriodosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
         return $result;
     }
 
+    /**
+     * Obtener el último período creado (independientemente del estado)
+     */
+    public function getUltimoPeriodo()
+    {
+        $sql = $this->getSql();
+        $select = $sql->select();
+        $select->where(['estado != ?' => 'eliminado'])
+            ->order(['fecha_creacion DESC', 'id_periodo DESC'])
+            ->limit(1);
+        
+        $statement = $sql->prepareStatementForSqlObject($select);
+        $resultSet = $statement->execute();
+        
+        $result = $resultSet->current();
+        return $result ? $result : null;
+    }
+
     public function getAllPeriodos()
     {
         $sql = $this->getSql();

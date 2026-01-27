@@ -498,7 +498,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 }
 
                 $result = $premiosTable->update($params, ["id_premio" => $idSolicitud]);
-                if ($result->getAffectedRows() > 0) {
+                if ($result > 0) {
                     $this->saveLog($id_usuario, 'Se edito la solicitud de premios con id '. $idSolicitud);
                     $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                 } else {
@@ -597,7 +597,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 unset($params['fecha_obtencion']);
 
                 $result = $formacionTable->update($params, ["id_formacion_academica" => $idSolicitud]);
-                if ($result->getAffectedRows() > 0) {
+                if ($result > 0) {
                     $this->saveLog($id_usuario, 'Se edito la solicitud de formación academica con id '. $idSolicitud);
                     $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                 } else {
@@ -694,7 +694,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                     }
     
                     $result = $cargosTable->update($params, ["id_cargo" => $idSolicitud]);
-                    if ($result->getAffectedRows() > 0) {
+                    if ($result > 0) {
                         $this->saveLog($id_usuario, 'Se edito la solicitud de cargos desempeñados con id '. $idSolicitud);
                         $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                     } else {
@@ -743,7 +743,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 "periodoActivo" => $periodoActivo
             ]);
         }else{
-            $solicitud = $cargosTable->getCargoById($id_usuario, $idSolicitud);
+            $solicitud = $cargosTable->getCargosById($id_usuario, $idSolicitud);
             return new ViewModel([
                 "data" => $this->authService->getIdentity()->getData(), 
                 "dataedit" => $solicitud, 
@@ -788,7 +788,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 }
 
                 $result = $investigacionesTable->update($params, ["id_investigacion" => $idSolicitud]);
-                if ($result->getAffectedRows() > 0) {
+                if ($result > 0) {
                     $this->saveLog($id_usuario, 'Se edito la solicitud de investigaciones/publicaciones con id '. $idSolicitud);
                     $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                 } else {
@@ -871,7 +871,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 }
 
                 $result = $capacitacionTable->update($params, ["id_capacitacion" => $idSolicitud]);
-                if ($result->getAffectedRows() > 0) {
+                if ($result > 0) {
                     $this->saveLog($id_usuario, 'Se edito la solicitud de capacitación profesional con id '. $idSolicitud);
                     $this->flashMessenger()->addSuccessMessage('Solicitud editada correctamente');
                 } else {
@@ -910,7 +910,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 "periodoActivo" => $periodoActivo
             ]);
         }else{
-            $solicitud = $capacitacionTable->getCapacitacionById($id_usuario, $idSolicitud);
+            $solicitud = $capacitacionTable->getCapacitacionProfesionalById($id_usuario, $idSolicitud);
             return new ViewModel([
                 "data" => $this->authService->getIdentity()->getData(), 
                 "dataedit" => $solicitud, 
@@ -924,19 +924,14 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
             return $this->redirect()->toRoute('home');
         }
+
         //cambiar al layout administrativo...
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
-        // Verificar período activo
         $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
-        $periodoActivo = $periodosTable->getPeriodoActivo();
+        $ultimoPeriodo = $periodosTable->getUltimoPeriodo();
         
-        if (empty($periodoActivo)) {
-            $this->flashMessenger()->addErrorMessage('No hay un período activo configurado.');
-            return $this->redirect()->toRoute("administracionHome/administracion", ["action" => "configuracion"]);
-        }
-
         // Obtener filtro de categoría de la URL
         $categoriaFiltro = $this->params()->fromRoute('val1', 'todas'); 
 
@@ -946,35 +941,43 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $capacitacionList = [];
         $formacionList = [];
         $investigaciones = [];
+        $periodoActivo = null;
 
-        // Obtener datos del PERÍODO ACTIVO según el filtro de categoría
-        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'premios') {
-            $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
-            $premios = $premiosTable->getPremiosPeriodoActual();
-        }
+        // Solo obtener datos si hay último período Y está activo o inactivo (NO cerrado)
+        if ($ultimoPeriodo && in_array($ultimoPeriodo['estado'], ['activo', 'inactivo'])) {
+            $periodo_id = $ultimoPeriodo['id_periodo'];
+            $periodoActivo = [$ultimoPeriodo];
 
-        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'cargos') {
-            $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
-            $cargos = $cargosTable->getCargosPeriodoActual();
-        }
+            // Obtener datos del ÚLTIMO PERÍODO según el filtro de categoría
+            if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'premios') {
+                $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
+                $premios = $premiosTable->getByPeriodo($periodo_id);
+            }
 
-        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'capacitacion') {
-            $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
-            $capacitacionList = $capacitacionTable->getCapacitacionProfesionalPeriodoActual();
-        }
+            if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'cargos') {
+                $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
+                $cargos = $cargosTable->getByPeriodo($periodo_id);
+            }
 
-        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'formacion') {
-            $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
-            $formacionList = $formacionTable->getFormacionAcademicaPeriodoActual(); 
-        }
+            if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'capacitacion') {
+                $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
+                $capacitacionList = $capacitacionTable->getByPeriodo($periodo_id);
+            }
 
-        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'investigaciones') {
-            $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
-            $investigaciones = $investigacionesTable->getInvestigacionesPeriodoActual();
+            if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'formacion') {
+                $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
+                $formacionList = $formacionTable->getByPeriodo($periodo_id); 
+            }
+
+            if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'investigaciones') {
+                $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
+                $investigaciones = $investigacionesTable->getByPeriodo($periodo_id);
+            }
         }
         
         // Inicializar el servicio de validación de puntajes
         $puntajeValidator = new \Meritos\Services\PuntajeValidatorService($this->adapter);
+        $puntajeValidator->setPeriodoActual($ultimoPeriodo['id_periodo']);
         
         // Procesar todas las solicitudes para agregar información de límites
         $todasLasSolicitudes = [];
@@ -1074,9 +1077,9 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             "formacion" => $formacionList, 
             "investigaciones" => $investigaciones,
             "categoriaActual" => $categoriaFiltro,
-            "periodoActivo" => $periodoActivo[0],
-            "puntajeValidator" => $puntajeValidator, // Para usar en la vista si es necesario
-            "todasLasSolicitudes" => $todasLasSolicitudes // Array unificado con toda la información
+            "periodoActivo" => $periodoActivo ? $periodoActivo[0] : null,
+            "puntajeValidator" => $puntajeValidator,
+            "todasLasSolicitudes" => $todasLasSolicitudes
         ]);
     }
 
@@ -1130,47 +1133,76 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $usuario = $this->authService->getIdentity()->getData()["usuario"];
 
         $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
+        
+        // CAMBIO PRINCIPAL: Obtener último período en lugar del período activo
+        $ultimoPeriodo = $periodosTable->getUltimoPeriodo();
         $periodoActivo = $periodosTable->getPeriodoActivo();
-        $puedeSubir = $periodosTable->isPeriodoActivo();
+        
+        // Determinar si puede subir méritos (solo si hay período activo)
+        $puedeSubir = !empty($periodoActivo);
+        
+        // Si no hay último período, mostrar mensaje informativo
+        if (!$ultimoPeriodo) {
+            $this->flashMessenger()->addWarningMessage('No hay períodos configurados en el sistema.');
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(),  
+                "premios" => [], 
+                "cargos" => [], 
+                "formacionAcademica" => [], 
+                "capacitacionProfesional" => [], 
+                "investigaciones" => [], 
+                "miPuntaje" => 0, 
+                "puntos" => [],
+                "periodoActual" => null,
+                "periodoActivo" => null,
+                "puedeSubir" => false
+            ]);
+        }
 
-        //Obtenemos todos los méritos académicos por usuario del PERÍODO ACTIVO
+        // Usar el último período para obtener las solicitudes
+        $periodo_id = $ultimoPeriodo['id_periodo'];
+
+        //Obtenemos todos los méritos académicos por usuario del ÚLTIMO PERÍODO
         $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
-        $misPremios = $premiosTable->getPremiosByUserPeriodoActual($usuario);
+        $misPremios = $premiosTable->getPremiosByUserPeriodo($usuario, $periodo_id);
 
         $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
-        $misCargos = $cargosTable->getCargosByUserPeriodoActual($usuario);
+        $misCargos = $cargosTable->getCargosByUserPeriodo($usuario, $periodo_id);
 
         $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
-        $misCapacitaciones = $capacitacionTable->getCapacitacionProfesionalByUserPeriodoActual($usuario);
+        $misCapacitaciones = $capacitacionTable->getCapacitacionProfesionalByUserPeriodo($usuario, $periodo_id);
         
         $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
-        $miformacionacademica = $formacionTable->getFormacionAcademicaByUserPeriodoActual($usuario);
+        $miformacionacademica = $formacionTable->getFormacionAcademicaByUserPeriodo($usuario, $periodo_id);
         
         $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
-        $misInvestigaciones = $investigacionesTable->getInvestigacionesByUserPeriodoActual($usuario);
+        $misInvestigaciones = $investigacionesTable->getInvestigacionesByUserPeriodo($usuario, $periodo_id);
         
         $puntosTable = new \ORM\Model\Entity\PuntosTable($this->adapter);
-        $misPuntos = $puntosTable->getPuntosByUser($usuario);
+        $misPuntos = $puntosTable->getPuntosByUserPeriodo($usuario, $periodo_id);
         
         $puntajeActual = $misPuntos ? floatval($misPuntos[0]["capacitacion_profesional"]) + floatval($misPuntos[0]["formacion_academica"]) + floatval($misPuntos[0]["premios"]) + floatval($misPuntos[0]["investigaciones"]) + floatval($misPuntos[0]["cargos"]) : 0;
         
         if(!$misPuntos){
-            $misPuntos = array( ["premios" => "0",
-                "investigaciones" => "0",
-                "cargos" => "0",
-                "capacitacion_profesional" => "0",
-                "formacion_academica" => "0" ]);
+            $misPuntos = array( 
+                ["premios" => "0",
+                "capacitacion_profesional" => "0", 
+                "formacion_academica" => "0", 
+                "investigaciones" => "0", 
+                "cargos" => "0"]
+            );
         }
 
         return new ViewModel([
             "data" => $this->authService->getIdentity()->getData(),  
-            "premios"=> $misPremios, 
-            "cargos"=> $misCargos, 
+            "premios" => $misPremios, 
+            "cargos" => $misCargos, 
             "formacionAcademica" => $miformacionacademica, 
-            "capacitacionProfesional"=> $misCapacitaciones, 
-            "investigaciones"=>  $misInvestigaciones, 
-            "miPuntaje" =>$puntajeActual, 
+            "capacitacionProfesional" => $misCapacitaciones, 
+            "investigaciones" => $misInvestigaciones, 
+            "miPuntaje" => $puntajeActual, 
             "puntos" => $misPuntos,
+            "periodoActual" => $ultimoPeriodo,
             "periodoActivo" => !empty($periodoActivo) ? $periodoActivo[0] : null,
             "puedeSubir" => $puedeSubir
         ]);
@@ -1193,6 +1225,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $cargosTable->getSolicitud($id_solicitud);
 
+        // OBTENER EL PERÍODO DE LA SOLICITUD
+        $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        if (!$periodo_id) {
+            $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+        }
+
         if ($this->params()->fromPost("action") == "editarEstado") {
             $nuevoEstado = $this->params()->fromPost("nuevo_estado");
             $motivoCambio = $this->params()->fromPost("motivo_cambio");
@@ -1211,8 +1250,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $cargosTable->update($params, ["id_cargo" => $id_solicitud]);
             
             if ($result > 0) {
-                // Manejar puntos según el cambio de estado
-                $this->manejarCambioPuntosCargos($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado);
+                // Manejar puntos según el cambio de estado INCLUYENDO PERÍODO
+                $this->manejarCambioPuntosCargos($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id);
                 
                 // Registrar en log
                 $estadoTexto = $this->getEstadoTexto($nuevoEstado);
@@ -1243,14 +1282,12 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $cargosTable->update($params, ["id_cargo" => $id_solicitud]);
                 
             if ($result > 0) {
-                //$this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de cargos desempeñados con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-           
         }
 
         if ($this->params()->fromPost("action") == "aceptar") {
@@ -1259,44 +1296,52 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
             $resultado = $cargosTable->update($params, ["id_cargo" => $id_solicitud]);
             
-            
             if ($resultado > 0) {
                 $id_usuario = $this->params()->fromPost("id_usuario");
-                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+                
+                // OBTENER PUNTOS POR PERÍODO
+                $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
                 $puntosActuales = $misPuntos ? $misPuntos[0]["cargos"] : 0;
                 $year = date("Y");
                 $auxPts = $this->params()->fromPost("puntos");
+                
                 if($misPuntos){
-                    //Ya hay puntos 
+                    //Ya hay puntos para este período
                     $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
                     if($nuevoPuntaje >= 4){
                         $nuevoPuntaje = 4;
                     }
-                    $params = array( "cargos" => $nuevoPuntaje,
-                    "year"=>$year);
-                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    $params = array( 
+                        "cargos" => $nuevoPuntaje,
+                        "year" => $year
+                    );
+                    $result = $puntosTable->update($params, ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]);
                     
                 }else{
-                    //No hay puntos
-                    $params = array( "cargos" => $auxPts,
-                                     "id_usuario" => $id_usuario,
-                                     "year"=>$year);
+                    //No hay puntos para este período
+                    $params = array( 
+                        "premios" => 0,
+                        "investigaciones" => 0,
+                        "formacion_academica" => 0,
+                        "cargos" => $auxPts,
+                        "capacitacion_profesional" => 0,
+                        "id_usuario" => $id_usuario,
+                        "id_periodo" => $periodo_id,
+                        "year" => $year
+                    );
                     $result = $puntosTable->insert($params);
                 }
 
                 $user = $userTable->getUserById($id_usuario);
-                //$this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
                 $this->saveLog($id_admin, 'Se acepto la solicitud de cargos desempeñados con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-
         }
 
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
-
     }
 
     public function admPremiosAction(){
@@ -1307,7 +1352,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
-
         $id_admin = $this->authService->getIdentity()->getData()["usuario"];
         $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
         $puntosTable = new \ORM\Model\Entity\PuntosTable($this->adapter);
@@ -1315,6 +1359,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $premiosTable->getSolicitud($id_solicitud);
+
+        // OBTENER EL PERÍODO DE LA SOLICITUD
+        $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        if (!$periodo_id) {
+            $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+        }
 
         if ($this->params()->fromPost("action") == "editarEstado") {
             $nuevoEstado = $this->params()->fromPost("nuevo_estado");
@@ -1334,8 +1385,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $premiosTable->update($params, ["id_premio" => $id_solicitud]);
             
             if ($result > 0) {
-                // Manejar puntos según el cambio de estado
-                $this->manejarCambioPuntosPremios($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado);
+                // Manejar puntos según el cambio de estado INCLUYENDO PERÍODO
+                $this->manejarCambioPuntosPremios($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id);
                 
                 // Registrar en log
                 $estadoTexto = $this->getEstadoTexto($nuevoEstado);
@@ -1354,7 +1405,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             }
         }
 
-        //var_dump($solicitud);
         if ($this->params()->fromPost("action") == "rechazar") {
             $params = $this->params()->fromPost();
             $params['id_estado'] = '3';
@@ -1367,14 +1417,12 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $premiosTable->update($params, ["id_premio" => $id_solicitud]);
                 
             if ($result > 0) {
-                // $this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de premios con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-           
         }
 
         if ($this->params()->fromPost("action") == "aceptar") {
@@ -1383,47 +1431,52 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
             $resultado = $premiosTable->update($params, ["id_premio" => $id_solicitud]);
             
-            
             if ($resultado > 0) {
                 $id_usuario = $this->params()->fromPost("id_usuario");
-                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+                
+                // OBTENER PUNTOS POR PERÍODO
+                $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
                 $puntosActuales = $misPuntos ? $misPuntos[0]["premios"] : 0;
                 $year = date("Y");
                 $auxPts = $this->params()->fromPost("puntos");
+                
                 if($misPuntos){
-                    //Ya hay puntos 
+                    //Ya hay puntos para este período
                     $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
                     if($nuevoPuntaje >= 2){
                         $nuevoPuntaje = 2;
-                    }else{
-                        $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
                     }
-
-                    $params = array( "premios" => $nuevoPuntaje,
-                    "year"=>$year);
-                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    $params = array( 
+                        "premios" => $nuevoPuntaje,
+                        "year" => $year
+                    );
+                    $result = $puntosTable->update($params, ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]);
                     
                 }else{
-                    //No hay puntos
-                    $params = array( "premios" => $auxPts,
-                                     "id_usuario" => $id_usuario,
-                                     "year"=>$year);
+                    //No hay puntos para este período
+                    $params = array( 
+                        "premios" => $auxPts,
+                        "investigaciones" => 0,
+                        "formacion_academica" => 0,
+                        "cargos" => 0,
+                        "capacitacion_profesional" => 0,
+                        "id_usuario" => $id_usuario,
+                        "id_periodo" => $periodo_id,
+                        "year" => $year
+                    );
                     $result = $puntosTable->insert($params);
                 }
 
                 $user = $userTable->getUserById($id_usuario);
-               //$this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
                 $this->saveLog($id_admin, 'Se acepto la solicitud de premios con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-            
         }
 
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
-
     }
 
     public function admCapacitacionProfesionalAction(){
@@ -1441,6 +1494,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $capacitacionTable->getSolicitud($id_solicitud);
+
+        // OBTENER EL PERÍODO DE LA SOLICITUD
+        $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        if (!$periodo_id) {
+            $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+        }
 
         if ($this->params()->fromPost("action") == "editarEstado") {
             $nuevoEstado = $this->params()->fromPost("nuevo_estado");
@@ -1460,8 +1520,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $capacitacionTable->update($params, ["id_capacitacion" => $id_solicitud]);
             
             if ($result > 0) {
-                // Manejar puntos según el cambio de estado
-                $this->manejarCambioPuntosCapacitacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado);
+                // Manejar puntos según el cambio de estado INCLUYENDO PERÍODO
+                $this->manejarCambioPuntosCapacitacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id);
                 
                 // Registrar en log
                 $estadoTexto = $this->getEstadoTexto($nuevoEstado);
@@ -1492,77 +1552,66 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $capacitacionTable->update($params, ["id_capacitacion" => $id_solicitud]);
                 
             if ($result > 0) {
-                //$this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de capacitación profesional con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-           
         }
 
         if ($this->params()->fromPost("action") == "aceptar") {
             $params = array( "mensaje" => "Solicitud aceptada con éxito",
-                "id_estado" => '2' ); //cambiar a estado 2
+                "id_estado" => '2' );
 
             $resultado = $capacitacionTable->update($params, ["id_capacitacion" => $id_solicitud]);
             
-       // print_r($resultado);die;
             if ($resultado > 0) {
                 $id_usuario = $this->params()->fromPost("id_usuario");
-                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+                
+                // OBTENER PUNTOS POR PERÍODO
+                $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
                 $puntosActuales = $misPuntos ? $misPuntos[0]["capacitacion_profesional"] : 0;
                 $year = date("Y");
                 $auxPts = $this->params()->fromPost("puntos");
                 
                 if($misPuntos){
-                    
-                    //Ya hay puntos 
+                    //Ya hay puntos para este período
                     $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
-                  /*
-                    print_r('<br>puntosActuales = '.$puntosActuales);
-                    print_r('<br>auxPts = '.$auxPts);
-                    print_r('<br>nuevoPuntaje1 = '.$nuevoPuntaje);*/
                     if($nuevoPuntaje >= 8){
                         $nuevoPuntaje = 8;
-                    }else{
-                        $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);;
                     }
-                    /* //modificado a solicitud de CEDA 2025-02-18 13:00
-                    if($auxPts >= floatval($puntosActuales)){
-                        $nuevoPuntaje = $auxPts;
-                    }else{
-                        $nuevoPuntaje = $puntosActuales;
-                    }*/
-                    //print_r('<br>nuevoPuntaje2 = '.$nuevoPuntaje);
-                    //die;
-                    $params = array( "capacitacion_profesional" => $nuevoPuntaje,
-                    "year"=>$year);
-
-                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    $params = array( 
+                        "capacitacion_profesional" => $nuevoPuntaje,
+                        "year" => $year
+                    );
+                    $result = $puntosTable->update($params, ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]);
                     
                 }else{
-                    //No hay puntos
-                    $params = array( "capacitacion_profesional" => $auxPts,
-                                    "id_usuario" => $id_usuario,
-                                    "year"=>$year);
+                    //No hay puntos para este período
+                    $params = array( 
+                        "premios" => 0,
+                        "investigaciones" => 0,
+                        "formacion_academica" => 0,
+                        "cargos" => 0,
+                        "capacitacion_profesional" => $auxPts,
+                        "id_usuario" => $id_usuario,
+                        "id_periodo" => $periodo_id,
+                        "year" => $year
+                    );
                     $result = $puntosTable->insert($params);
                 }
 
                 $user = $userTable->getUserById($id_usuario);
-                // $this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
                 $this->saveLog($id_admin, 'Se acepto la solicitud de capacitación profesional con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-
         }
 
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
-
     }
 
     public function admFormacionAcademicaAction(){
@@ -1580,6 +1629,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $formacionTable->getSolicitud($id_solicitud);
+
+        // OBTENER EL PERÍODO DE LA SOLICITUD
+        $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        if (!$periodo_id) {
+            $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+        }
 
         if ($this->params()->fromPost("action") == "editarEstado") {
             $nuevoEstado = $this->params()->fromPost("nuevo_estado");
@@ -1599,8 +1655,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $formacionTable->update($params, ["id_formacion_academica" => $id_solicitud]);
             
             if ($result > 0) {
-                // Manejar puntos según el cambio de estado
-                $this->manejarCambioPuntosFormacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado);
+                // Manejar puntos según el cambio de estado INCLUYENDO PERÍODO
+                $this->manejarCambioPuntosFormacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id);
                 
                 // Registrar en log
                 $estadoTexto = $this->getEstadoTexto($nuevoEstado);
@@ -1647,30 +1703,42 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             
             if ($resultado > 0) {
                 $id_usuario = $this->params()->fromPost("id_usuario");
-                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
                 
+                // OBTENER PUNTOS POR PERÍODO
+                $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
                 $puntosActuales = $misPuntos ? $misPuntos[0]["formacion_academica"] : 0;
                 $year = date("Y");
                 $auxPts = $this->params()->fromPost("puntos");
+                
                 if($misPuntos){
+                    // Tomar el mayor puntaje (lógica original)
                     if($auxPts >= floatval($puntosActuales)){
                         $nuevoPuntaje = $auxPts;
                     }else{
                         $nuevoPuntaje = $puntosActuales;
                     }
-                    $params = array( "formacion_academica" => $nuevoPuntaje,
-                    "year"=>$year);
-                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    $params = array( 
+                        "formacion_academica" => $nuevoPuntaje,
+                        "year" => $year
+                    );
+                    $result = $puntosTable->update($params, ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]);
                     
                 }else{
-                    $params = array( "formacion_academica" => $auxPts,
-                                    "id_usuario" => $id_usuario,
-                                    "year"=>$year);
+                    //No hay puntos para este período
+                    $params = array( 
+                        "premios" => 0,
+                        "investigaciones" => 0,
+                        "formacion_academica" => $auxPts,
+                        "cargos" => 0,
+                        "capacitacion_profesional" => 0,
+                        "id_usuario" => $id_usuario,
+                        "id_periodo" => $periodo_id,
+                        "year" => $year
+                    );
                     $result = $puntosTable->insert($params);
                 }
 
                 $user = $userTable->getUserById($id_usuario);
-                //$this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
                 $this->saveLog($id_admin, 'Se acepto la solicitud de formación académica con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
@@ -1682,88 +1750,10 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
     }
 
-    // Método auxiliar para manejar puntos de FORMACIÓN ACADÉMICA
-    private function manejarCambioPuntosFormacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado) {
-        $year = date("Y");
-        $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
-        $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["formacion_academica"]) : 0;
-
-        // Si cambia de Aceptada (2) a Rechazada (3) o Ingresada (1) -> QUITAR puntos
-        if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
-            $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
-            
-            if ($misPuntos) {
-                $puntosTable->update(
-                    ["formacion_academica" => $nuevosPuntos, "year" => $year],
-                    ["id_usuario" => $id_usuario]
-                );
-            }
-        }
-        
-        // Si cambia de Rechazada (3) o Ingresada (1) a Aceptada (2) -> AGREGAR puntos
-        if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
-            // Para formación académica se toma el mayor valor, no se suman
-            $nuevoPuntaje = max($puntosUsuario, $puntosActuales);
-            
-            if ($misPuntos) {
-                $puntosTable->update(
-                    ["formacion_academica" => $nuevoPuntaje, "year" => $year],
-                    ["id_usuario" => $id_usuario]
-                );
-            } else {
-                $puntosTable->insert([
-                    "formacion_academica" => $puntosActuales,
-                    "id_usuario" => $id_usuario,
-                    "year" => $year
-                ]);
-            }
-        }
-    }
-
-    // Método auxiliar para manejar puntos de PREMIOS
-    private function manejarCambioPuntosPremios($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado) {
-        $year = date("Y");
-        $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
-        $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["premios"]) : 0;
-
-        // Si cambia de Aceptada (2) a Rechazada (3) o Ingresada (1) -> QUITAR puntos
-        if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
-            $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
-            
-            if ($misPuntos) {
-                $puntosTable->update(
-                    ["premios" => $nuevosPuntos, "year" => $year],
-                    ["id_usuario" => $id_usuario]
-                );
-            }
-        }
-        
-        // Si cambia de Rechazada (3) o Ingresada (1) a Aceptada (2) -> AGREGAR puntos
-        if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
-            $nuevoPuntaje = $puntosUsuario + $puntosActuales;
-            if ($nuevoPuntaje >= 2) {
-                $nuevoPuntaje = 2; // Máximo para premios
-            }
-            
-            if ($misPuntos) {
-                $puntosTable->update(
-                    ["premios" => $nuevoPuntaje, "year" => $year],
-                    ["id_usuario" => $id_usuario]
-                );
-            } else {
-                $puntosTable->insert([
-                    "premios" => $puntosActuales,
-                    "id_usuario" => $id_usuario,
-                    "year" => $year
-                ]);
-            }
-        }
-    }
-
     // Método auxiliar para manejar puntos de CARGOS
-    private function manejarCambioPuntosCargos($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado) {
+    private function manejarCambioPuntosCargos($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id) {
         $year = date("Y");
-        $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+        $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
         $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["cargos"]) : 0;
 
         // Si cambia de Aceptada (2) a Rechazada (3) o Ingresada (1) -> QUITAR puntos
@@ -1773,7 +1763,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             if ($misPuntos) {
                 $puntosTable->update(
                     ["cargos" => $nuevosPuntos, "year" => $year],
-                    ["id_usuario" => $id_usuario]
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
                 );
             }
         }
@@ -1788,12 +1778,88 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             if ($misPuntos) {
                 $puntosTable->update(
                     ["cargos" => $nuevoPuntaje, "year" => $year],
-                    ["id_usuario" => $id_usuario]
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
                 );
             } else {
                 $puntosTable->insert([
                     "cargos" => $puntosActuales,
                     "id_usuario" => $id_usuario,
+                    "id_periodo" => $periodo_id,
+                    "year" => $year
+                ]);
+            }
+        }
+    }
+
+    // Método auxiliar para manejar puntos de PREMIOS
+    private function manejarCambioPuntosPremios($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id) {
+        $year = date("Y");
+        $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
+        $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["premios"]) : 0;
+
+        if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
+            $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["premios" => $nuevosPuntos, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            }
+        }
+        
+        if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
+            $nuevoPuntaje = $puntosUsuario + $puntosActuales;
+            if ($nuevoPuntaje >= 2) {
+                $nuevoPuntaje = 2; // Máximo para premios
+            }
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["premios" => $nuevoPuntaje, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            } else {
+                $puntosTable->insert([
+                    "premios" => $puntosActuales,
+                    "id_usuario" => $id_usuario,
+                    "id_periodo" => $periodo_id,
+                    "year" => $year
+                ]);
+            }
+        }
+    }
+
+    // Método auxiliar para manejar puntos de FORMACIÓN ACADÉMICA
+    private function manejarCambioPuntosFormacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id) {
+        $year = date("Y");
+        $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
+        $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["formacion_academica"]) : 0;
+
+        if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
+            $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["formacion_academica" => $nuevosPuntos, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            }
+        }
+        
+        if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
+            $nuevoPuntaje = max($puntosUsuario, $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["formacion_academica" => $nuevoPuntaje, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            } else {
+                $puntosTable->insert([
+                    "formacion_academica" => $puntosActuales,
+                    "id_usuario" => $id_usuario,
+                    "id_periodo" => $periodo_id,
                     "year" => $year
                 ]);
             }
@@ -1801,24 +1867,22 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
     }
 
     // Método auxiliar para manejar puntos de CAPACITACIÓN
-    private function manejarCambioPuntosCapacitacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado) {
+    private function manejarCambioPuntosCapacitacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id) {
         $year = date("Y");
-        $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+        $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
         $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["capacitacion_profesional"]) : 0;
 
-        // Si cambia de Aceptada (2) a Rechazada (3) o Ingresada (1) -> QUITAR puntos
         if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
             $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
             
             if ($misPuntos) {
                 $puntosTable->update(
                     ["capacitacion_profesional" => $nuevosPuntos, "year" => $year],
-                    ["id_usuario" => $id_usuario]
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
                 );
             }
         }
         
-        // Si cambia de Rechazada (3) o Ingresada (1) a Aceptada (2) -> AGREGAR puntos
         if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
             $nuevoPuntaje = $puntosUsuario + $puntosActuales;
             if ($nuevoPuntaje >= 8) {
@@ -1828,12 +1892,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             if ($misPuntos) {
                 $puntosTable->update(
                     ["capacitacion_profesional" => $nuevoPuntaje, "year" => $year],
-                    ["id_usuario" => $id_usuario]
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
                 );
             } else {
                 $puntosTable->insert([
                     "capacitacion_profesional" => $puntosActuales,
                     "id_usuario" => $id_usuario,
+                    "id_periodo" => $periodo_id,
                     "year" => $year
                 ]);
             }
@@ -1841,24 +1906,22 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
     }
 
     // Método auxiliar para manejar puntos de INVESTIGACIONES
-    private function manejarCambioPuntosInvestigaciones($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado) {
+    private function manejarCambioPuntosInvestigaciones($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id) {
         $year = date("Y");
-        $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+        $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
         $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["investigaciones"]) : 0;
 
-        // Si cambia de Aceptada (2) a Rechazada (3) o Ingresada (1) -> QUITAR puntos
         if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
             $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
             
             if ($misPuntos) {
                 $puntosTable->update(
                     ["investigaciones" => $nuevosPuntos, "year" => $year],
-                    ["id_usuario" => $id_usuario]
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
                 );
             }
         }
         
-        // Si cambia de Rechazada (3) o Ingresada (1) a Aceptada (2) -> AGREGAR puntos
         if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
             $nuevoPuntaje = $puntosUsuario + $puntosActuales;
             if ($nuevoPuntaje >= 6) {
@@ -1868,12 +1931,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             if ($misPuntos) {
                 $puntosTable->update(
                     ["investigaciones" => $nuevoPuntaje, "year" => $year],
-                    ["id_usuario" => $id_usuario]
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
                 );
             } else {
                 $puntosTable->insert([
                     "investigaciones" => $puntosActuales,
                     "id_usuario" => $id_usuario,
+                    "id_periodo" => $periodo_id,
                     "year" => $year
                 ]);
             }
@@ -1940,6 +2004,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $investigacionesTable->getSolicitud($id_solicitud);
 
+        // OBTENER EL PERÍODO DE LA SOLICITUD
+        $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        if (!$periodo_id) {
+            $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+        }
+
         if ($this->params()->fromPost("action") == "editarEstado") {
             $nuevoEstado = $this->params()->fromPost("nuevo_estado");
             $motivoCambio = $this->params()->fromPost("motivo_cambio");
@@ -1958,8 +2029,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $investigacionesTable->update($params, ["id_investigacion" => $id_solicitud]);
             
             if ($result > 0) {
-                // Manejar puntos según el cambio de estado
-                $this->manejarCambioPuntosInvestigaciones($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado);
+                // Manejar puntos según el cambio de estado INCLUYENDO PERÍODO
+                $this->manejarCambioPuntosInvestigaciones($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id);
                 
                 // Registrar en log
                 $estadoTexto = $this->getEstadoTexto($nuevoEstado);
@@ -1990,14 +2061,12 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $investigacionesTable->update($params, ["id_investigacion" => $id_solicitud]);
                 
             if ($result > 0) {
-                //$this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de investigaciones/publicaciones con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-           
         }
 
         if ($this->params()->fromPost("action") == "aceptar") {
@@ -2008,71 +2077,50 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
             if ($resultado > 0) {
                 $id_usuario = $this->params()->fromPost("id_usuario");
-                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+                
+                // OBTENER PUNTOS POR PERÍODO
+                $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
                 $puntosActuales = $misPuntos ? $misPuntos[0]["investigaciones"] : 0;
                 $year = date("Y");
                 $auxPts = $this->params()->fromPost("puntos");
                 
                 if($misPuntos){
-                    
-                    //Ya hay puntos 
+                    //Ya hay puntos para este período
                     $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
-                  /*
-                    print_r('<br>puntosActuales = '.$puntosActuales);
-                    print_r('<br>auxPts = '.$auxPts);
-                    print_r('<br>nuevoPuntaje1 = '.$nuevoPuntaje);*/
                     if($nuevoPuntaje >= 6){
                         $nuevoPuntaje = 6;
-                    }else{
-                        $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);;
                     }
-                     //modificado a solicitud de CEDA 2025-02-18 13:00*
+                    $params = array( 
+                        "investigaciones" => $nuevoPuntaje,
+                        "year" => $year
+                    );
+                    $result = $puntosTable->update($params, ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]);
                     
-                    $params = array( "investigaciones" => $nuevoPuntaje,
-                    "year"=>$year);
-
-                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
-                    
-                }
-                
-                /*
-                if($misPuntos){
-                    //Ya hay puntos 
-                    //$nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
-                    // if($nuevoPuntaje >= floatval($puntosActuales)){
-                    //     $nuevoPuntaje = $nuevoPuntaje;
-                    // }
-                    if($auxPts >= floatval($puntosActuales)){
-                        $nuevoPuntaje = $auxPts;
-                    }else{
-                        $nuevoPuntaje = $puntosActuales;
-                    }
-                    $params = array( "investigaciones" => $nuevoPuntaje,
-                    "year"=>$year);
-                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
-                    
-                }*/
-                else{
-                    //No hay puntos
-                    $params = array( "investigaciones" => $auxPts,
-                                     "id_usuario" => $id_usuario,
-                                     "year"=>$year);
+                }else{
+                    //No hay puntos para este período
+                    $params = array( 
+                        "premios" => 0,
+                        "investigaciones" => $auxPts,
+                        "formacion_academica" => 0,
+                        "cargos" => 0,
+                        "capacitacion_profesional" => 0,
+                        "id_usuario" => $id_usuario,
+                        "id_periodo" => $periodo_id,
+                        "year" => $year
+                    );
                     $result = $puntosTable->insert($params);
                 }
 
                 $user = $userTable->getUserById($id_usuario);
-                //$this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
-                $this->saveLog($id_admin, 'Se rechazo la solicitud de investigaciones/publicaciones con id: ' . $id_solicitud);
+                $this->saveLog($id_admin, 'Se acepto la solicitud de investigaciones/publicaciones con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-
         }
 
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
-
     }
 
     private function obtenerPeriodoActivo() {
@@ -2119,7 +2167,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                     // Actualizar el estado a cerrado
                     $sqlUpdate = $periodosTable->getSql();
                     $update = $sqlUpdate->update();
-                    $update->set(['estado' => 'cerrado']);
+                    $update->set(['estado' => 'inactivo']);
                     $update->where(['id_periodo' => $periodo['id_periodo']]);
                     $statement = $sqlUpdate->prepareStatementForSqlObject($update);
                     $statement->execute();
@@ -2131,7 +2179,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                     
                     $this->saveLog(
                         $usuario, 
-                        "Se cerró automáticamente el período '{$periodo['nombre']}' (ID: {$periodo['id_periodo']}) por expiración de fecha/hora. Expiró: {$fechaFin}"
+                        "Se desactivó automáticamente el período '{$periodo['nombre']}' (ID: {$periodo['id_periodo']}) por expiración de fecha/hora. Expiró: {$fechaFin}"
                     );
                     
                     $periodosCerradosAutomaticamente++;
@@ -2259,6 +2307,20 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                         $this->saveLog($id_admin, 'Se activó el período ID: ' . $periodo_id);
                         $this->flashMessenger()->addSuccessMessage('Período activado exitosamente.');
                         break;
+
+                    case 'desactivar_periodo':
+                        $periodo_id = $this->getRequest()->getPost('periodo_id');
+                        
+                        $sql = $periodosTable->getSql();
+                        $update = $sql->update();
+                        $update->set(['estado' => 'inactivo']);
+                        $update->where(['id_periodo' => $periodo_id]);
+                        $statement = $sql->prepareStatementForSqlObject($update);
+                        $statement->execute();
+                        
+                        $this->saveLog($id_admin, 'Se desactivó el período ID: ' . $periodo_id);
+                        $this->flashMessenger()->addSuccessMessage('Período desactivado exitosamente.');
+                        break;
                         
                     case 'editar_periodo':
                         $periodo_id = $this->getRequest()->getPost('periodo_id');
@@ -2297,8 +2359,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                         $statement = $sql->prepareStatementForSqlObject($update);
                         $statement->execute();
                         
-                        $this->saveLog($id_admin, 'Se cerró el período ID: ' . $periodo_id);
-                        $this->flashMessenger()->addSuccessMessage('Período cerrado exitosamente.');
+                        $this->saveLog($id_admin, 'Se cerró definitivamente el período ID: ' . $periodo_id);
+                        $this->flashMessenger()->addSuccessMessage('Período cerrado.');
                         break;
                         
                     case 'eliminar_periodo':

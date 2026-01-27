@@ -4,6 +4,7 @@ namespace Meritos\Services;
 class PuntajeValidatorService {
     
     private $adapter;
+    private $periodoActual = null;
     
     // Límites por categoría
     const LIMITES = [
@@ -21,34 +22,54 @@ class PuntajeValidatorService {
     }
     
     /**
-     * Obtener puntaje actual por categoría de un docente
+     * Establecer el período actual para todas las consultas
      */
-    public function obtenerPuntajeActual($id_usuario, $categoria) {
-        // Obtener el año actual o el período activo
-        $year = date('Y');
+    public function setPeriodoActual($periodo_id) {
+        $this->periodoActual = $periodo_id;
+    }
+    
+    /**
+     * Obtener puntaje actual por categoría de un docente en un período específico
+     */
+    public function obtenerPuntajeActual($id_usuario, $categoria, $periodo_id = null) {
+        $periodo = $periodo_id ?: $this->periodoActual;
+        
+        if (!$periodo) {
+            return 0;
+        }
         
         $sql = "SELECT {$categoria} as puntaje FROM puntos 
-                WHERE id_usuario = ? AND year = ?";
+                WHERE id_usuario = ? AND id_periodo = ?";
         
         $statement = $this->adapter->createStatement($sql);
-        $result = $statement->execute([$id_usuario, $year]);
+        $result = $statement->execute([$id_usuario, $periodo]);
         $row = $result->current();
         
         return (float)($row['puntaje'] ?? 0);
     }
     
     /**
-     * Obtener todos los puntajes de un docente
+     * Obtener todos los puntajes de un docente en un período específico
      */
-    public function obtenerTodosPuntajes($id_usuario) {
-        $year = date('Y');
+    public function obtenerTodosPuntajes($id_usuario, $periodo_id = null) {
+        $periodo = $periodo_id ?: $this->periodoActual;
+        
+        if (!$periodo) {
+            return [
+                'premios' => 0,
+                'investigaciones' => 0,
+                'formacion_academica' => 0,
+                'cargos' => 0,
+                'capacitacion_profesional' => 0
+            ];
+        }
         
         $sql = "SELECT premios, investigaciones, formacion_academica, cargos, capacitacion_profesional 
                 FROM puntos 
-                WHERE id_usuario = ? AND year = ?";
+                WHERE id_usuario = ? AND id_periodo = ?";
         
         $statement = $this->adapter->createStatement($sql);
-        $result = $statement->execute([$id_usuario, $year]);
+        $result = $statement->execute([$id_usuario, $periodo]);
         $row = $result->current();
         
         if (!$row) {
@@ -71,37 +92,37 @@ class PuntajeValidatorService {
     }
     
     /**
-     * Obtener puntaje total de un docente
+     * Obtener puntaje total de un docente en un período específico
      */
-    public function obtenerPuntajeTotal($id_usuario) {
-        $puntajes = $this->obtenerTodosPuntajes($id_usuario);
+    public function obtenerPuntajeTotal($id_usuario, $periodo_id = null) {
+        $puntajes = $this->obtenerTodosPuntajes($id_usuario, $periodo_id);
         
         return array_sum($puntajes);
     }
     
     /**
-     * Verificar si una categoría ha alcanzado su límite
+     * Verificar si una categoría ha alcanzado su límite en un período específico
      */
-    public function categoriaLimiteAlcanzado($id_usuario, $categoria) {
-        $puntajeActual = $this->obtenerPuntajeActual($id_usuario, $categoria);
+    public function categoriaLimiteAlcanzado($id_usuario, $categoria, $periodo_id = null) {
+        $puntajeActual = $this->obtenerPuntajeActual($id_usuario, $categoria, $periodo_id);
         $limite = self::LIMITES[$categoria] ?? 0;
         
         return $puntajeActual >= $limite;
     }
     
     /**
-     * Verificar si el docente ha alcanzado el límite total
+     * Verificar si el docente ha alcanzado el límite total en un período específico
      */
-    public function limiteTotalAlcanzado($id_usuario) {
-        return $this->obtenerPuntajeTotal($id_usuario) >= self::LIMITE_TOTAL;
+    public function limiteTotalAlcanzado($id_usuario, $periodo_id = null) {
+        return $this->obtenerPuntajeTotal($id_usuario, $periodo_id) >= self::LIMITE_TOTAL;
     }
     
     /**
-     * Determinar el estado que debería tener un mérito
+     * Determinar el estado que debería tener un mérito en un período específico
      */
-    public function determinarEstadoMerito($id_usuario, $categoria, $puntos_merito) {
-        $puntajeCategoria = $this->obtenerPuntajeActual($id_usuario, $categoria);
-        $puntajeTotal = $this->obtenerPuntajeTotal($id_usuario);
+    public function determinarEstadoMerito($id_usuario, $categoria, $puntos_merito, $periodo_id = null) {
+        $puntajeCategoria = $this->obtenerPuntajeActual($id_usuario, $categoria, $periodo_id);
+        $puntajeTotal = $this->obtenerPuntajeTotal($id_usuario, $periodo_id);
         $limiteCategoria = self::LIMITES[$categoria] ?? 0;
         
         // Si ya alcanzó el límite de la categoría
@@ -128,32 +149,39 @@ class PuntajeValidatorService {
     }
     
     /**
-     * Obtener información completa del docente para debug
+     * Obtener información completa del docente para debug en un período específico
      */
-    public function obtenerInformacionCompleta($id_usuario) {
-        $puntajes = $this->obtenerTodosPuntajes($id_usuario);
-        $total = $this->obtenerPuntajeTotal($id_usuario);
+    public function obtenerInformacionCompleta($id_usuario, $periodo_id = null) {
+        $puntajes = $this->obtenerTodosPuntajes($id_usuario, $periodo_id);
+        $total = $this->obtenerPuntajeTotal($id_usuario, $periodo_id);
         
         return [
             'puntajes_por_categoria' => $puntajes,
             'puntaje_total' => $total,
+            'periodo_usado' => $periodo_id ?: $this->periodoActual,
             'limites' => self::LIMITES,
             'limite_total' => self::LIMITE_TOTAL,
             'categorias_limite_alcanzado' => [
-                'premios' => $this->categoriaLimiteAlcanzado($id_usuario, 'premios'),
-                'investigaciones' => $this->categoriaLimiteAlcanzado($id_usuario, 'investigaciones'),
-                'formacion_academica' => $this->categoriaLimiteAlcanzado($id_usuario, 'formacion_academica'),
-                'cargos' => $this->categoriaLimiteAlcanzado($id_usuario, 'cargos'),
-                'capacitacion_profesional' => $this->categoriaLimiteAlcanzado($id_usuario, 'capacitacion_profesional'),
+                'premios' => $this->categoriaLimiteAlcanzado($id_usuario, 'premios', $periodo_id),
+                'investigaciones' => $this->categoriaLimiteAlcanzado($id_usuario, 'investigaciones', $periodo_id),
+                'formacion_academica' => $this->categoriaLimiteAlcanzado($id_usuario, 'formacion_academica', $periodo_id),
+                'cargos' => $this->categoriaLimiteAlcanzado($id_usuario, 'cargos', $periodo_id),
+                'capacitacion_profesional' => $this->categoriaLimiteAlcanzado($id_usuario, 'capacitacion_profesional', $periodo_id),
             ],
-            'limite_total_alcanzado' => $this->limiteTotalAlcanzado($id_usuario)
+            'limite_total_alcanzado' => $this->limiteTotalAlcanzado($id_usuario, $periodo_id)
         ];
     }
     
     /**
-     * Recalcular estados de todos los méritos de un docente
+     * Recalcular estados de todos los méritos de un docente en un período específico
      */
-    public function recalcularEstadosDocente($id_usuario) {
+    public function recalcularEstadosDocente($id_usuario, $periodo_id = null) {
+        $periodo = $periodo_id ?: $this->periodoActual;
+        
+        if (!$periodo) {
+            return;
+        }
+        
         $tablas = [
             'premios' => 'premios',
             'investigaciones' => 'investigaciones', 
@@ -163,9 +191,10 @@ class PuntajeValidatorService {
         ];
         
         foreach($tablas as $categoria => $tabla) {
-            // Obtener méritos ingresados y con límite alcanzado
+            // Obtener méritos ingresados del período específico
             $sql = "SELECT id, puntos FROM {$tabla} 
                     WHERE id_usuario = ? 
+                    AND id_periodo = ?
                     AND id_estado IN (
                         SELECT id_estado FROM estado 
                         WHERE nombre_estado IN ('Ingresada', 'Ingresada - Límite Alcanzado', 'Ingresada - Sin Efecto')
@@ -173,10 +202,10 @@ class PuntajeValidatorService {
                     ORDER BY created_at ASC";
             
             $statement = $this->adapter->createStatement($sql);
-            $result = $statement->execute([$id_usuario]);
+            $result = $statement->execute([$id_usuario, $periodo]);
             
             foreach($result as $merito) {
-                $nuevoEstado = $this->determinarEstadoMerito($id_usuario, $categoria, $merito['puntos']);
+                $nuevoEstado = $this->determinarEstadoMerito($id_usuario, $categoria, $merito['puntos'], $periodo);
                 
                 // Obtener ID del estado
                 $sqlEstado = "SELECT id_estado FROM estado WHERE nombre_estado = ?";
@@ -194,5 +223,23 @@ class PuntajeValidatorService {
                 }
             }
         }
+    }
+    
+
+    /**
+     * Obtener puntaje actual por categoría usando año (LEGACY)
+     * legacy 
+    */
+    public function obtenerPuntajeActualPorAño($id_usuario, $categoria, $year = null) {
+        $year = $year ?: date('Y');
+        
+        $sql = "SELECT {$categoria} as puntaje FROM puntos 
+                WHERE id_usuario = ? AND year = ?";
+        
+        $statement = $this->adapter->createStatement($sql);
+        $result = $statement->execute([$id_usuario, $year]);
+        $row = $result->current();
+        
+        return (float)($row['puntaje'] ?? 0);
     }
 }

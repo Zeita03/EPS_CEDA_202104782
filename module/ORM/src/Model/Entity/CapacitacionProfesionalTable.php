@@ -83,6 +83,44 @@ class CapacitacionProfesionalTable extends \Laminas\Db\TableGateway\AbstractTabl
     }
 
     /**
+     * Obtener capacitación profesional de un período específico por usuario
+     */
+    public function getCapacitacionProfesionalByUserPeriodo($id_usuario, $id_periodo)
+    {
+        if (empty($id_periodo)) {
+            return [];
+        }
+
+        $select = $this->getSql()->select();
+        $select->join(["e" => "estado"], "e.id_estado = capacitacion_profesional.id_estado");
+        $select->where->equalTo("id_usuario", $id_usuario);
+        $select->where->equalTo("capacitacion_profesional.id_periodo", $id_periodo);
+        $select->order(['capacitacion_profesional.created_at' => 'DESC']);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
+    /**
+     * Obtener capacitacion_profesional de un período específico
+     */
+    public function getByPeriodo($id_periodo)
+    {
+        if (empty($id_periodo)) {
+            return [];
+        }
+
+        $select = $this->getSql()->select();
+        $select->join(["u" => "usuario"], "u.usuario = capacitacion_profesional.id_usuario");
+        $select->join(["e" => "estado"], "e.id_estado = capacitacion_profesional.id_estado");
+        $select->where->equalTo("capacitacion_profesional.id_periodo", $id_periodo);
+        $select->order(['capacitacion_profesional.created_at' => 'DESC']);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
+    /**
      * Obtener capacitación profesional del período activo solamente
      */
     public function getCapacitacionProfesionalPeriodoActual()
