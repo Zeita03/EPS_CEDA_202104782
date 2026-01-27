@@ -83,6 +83,44 @@ class CargosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
     }
 
     /**
+     * Obtener cargos de un período específico por usuario
+     */
+    public function getCargosByUserPeriodo($id_usuario, $id_periodo)
+    {
+        if (empty($id_periodo)) {
+            return [];
+        }
+
+        $select = $this->getSql()->select();
+        $select->join(["e" => "estado"], "e.id_estado = cargos.id_estado");
+        $select->where->equalTo("id_usuario", $id_usuario);
+        $select->where->equalTo("cargos.id_periodo", $id_periodo);
+        $select->order(['cargos.created_at' => 'DESC']);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
+    /**
+     * Obtener cargos de un período específico
+     */
+    public function getByPeriodo($id_periodo)
+    {
+        if (empty($id_periodo)) {
+            return [];
+        }
+
+        $select = $this->getSql()->select();
+        $select->join(["u" => "usuario"], "u.usuario = cargos.id_usuario");
+        $select->join(["e" => "estado"], "e.id_estado = cargos.id_estado");
+        $select->where->equalTo("cargos.id_periodo", $id_periodo);
+        $select->order(['cargos.created_at' => 'DESC']);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
+    /**
      * Obtener cargos del período activo solamente
      */
     public function getCargosPeriodoActual()

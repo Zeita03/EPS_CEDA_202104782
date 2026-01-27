@@ -36,4 +36,23 @@ class PuntosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
         return $data;
     }
 
+    /**
+     * Obtener puntos de un usuario en un período específico
+     */
+    public function getPuntosByUserPeriodo($id_usuario, $id_periodo)
+    {
+        if (empty($id_periodo)) {
+            return [];
+        }
+
+        $select = $this->getSql()->select();
+        $select->where([
+            'id_usuario' => $id_usuario,
+            'id_periodo' => $id_periodo
+        ]);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
 }

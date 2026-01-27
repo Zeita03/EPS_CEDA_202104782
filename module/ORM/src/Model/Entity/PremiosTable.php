@@ -82,6 +82,44 @@ class PremiosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
     }
 
     /**
+     * Obtener premios de un período específico por usuario
+     */
+    public function getPremiosByUserPeriodo($id_usuario, $id_periodo)
+    {
+        if (empty($id_periodo)) {
+            return [];
+        }
+
+        $select = $this->getSql()->select();
+        $select->join(["e" => "estado"], "e.id_estado = premios.id_estado");
+        $select->where->equalTo("id_usuario", $id_usuario);
+        $select->where->equalTo("premios.id_periodo", $id_periodo);
+        $select->order(['premios.created_at' => 'DESC']);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
+    /**
+     * Obtener premios de un período específico
+     */
+    public function getByPeriodo($id_periodo)
+    {
+        if (empty($id_periodo)) {
+            return [];
+        }
+
+        $select = $this->getSql()->select();
+        $select->join(["u" => "usuario"], "u.usuario = premios.id_usuario");
+        $select->join(["e" => "estado"], "e.id_estado = premios.id_estado");
+        $select->where->equalTo("premios.id_periodo", $id_periodo);
+        $select->order(['premios.created_at' => 'DESC']);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
+    /**
      * Obtener premios del período activo solamente
      */
     public function getPremiosPeriodoActual()

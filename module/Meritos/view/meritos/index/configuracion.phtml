@@ -675,4 +675,34 @@ document.getElementById('modalConfirmacion').addEventListener('hidden.bs.modal',
     document.getElementById('modalConfirmacionMensaje').innerHTML = '';
     document.getElementById('modalConfirmacionDetalle').innerHTML = '';
 });
+
+document.querySelector('form[method="post"]').addEventListener('submit', function(e) {
+    // Solo validar el formulario de creación (no los otros)
+    const action = this.querySelector('input[name="action"]');
+    if (action && action.value === 'crear_periodo') {
+        e.preventDefault();
+        
+        // Verificar si hay períodos y cuál es el estado del último
+        <?php if (!empty($periodos)): ?>
+            const ultimoPeriodoEstado = '<?= $periodos[0]['estado'] ?? '' ?>';
+            const ultimoPeriodoNombre = '<?= addslashes($periodos[0]['nombre'] ?? '') ?>';
+            
+            if (ultimoPeriodoEstado !== 'cerrado') {
+                mostrarModalConfirmacion({
+                    titulo: 'Creación de Período Bloqueada',
+                    mensaje: `No se puede crear un nuevo período porque el último período <strong>"${ultimoPeriodoNombre}"</strong> no está cerrado.`,
+                    detalle: `
+                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                        <strong>Estado actual:</strong> ${ultimoPeriodoEstado.charAt(0).toUpperCase() + ultimoPeriodoEstado.slice(1)}<br><br>
+                        Para crear un nuevo período, primero debe cerrar definitivamente el período anterior.
+                    `,
+                    tipo: 'error',
+                    textoConfirmar: 'Entendido'
+                });
+                return false;
+            }
+        <?php endif; ?>
+        this.submit();
+    }
+});
 </script>

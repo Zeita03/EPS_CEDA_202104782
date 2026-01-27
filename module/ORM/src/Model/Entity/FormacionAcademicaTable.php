@@ -91,6 +91,44 @@ class FormacionAcademicaTable extends \Laminas\Db\TableGateway\AbstractTableGate
     }
 
     /**
+     * Obtener formación académica de un período específico por usuario
+     */
+    public function getFormacionAcademicaByUserPeriodo($id_usuario, $id_periodo)
+    {
+        if (empty($id_periodo)) {
+            return [];
+        }
+
+        $select = $this->getSql()->select();
+        $select->join(["e" => "estado"], "e.id_estado = formacion_academica.id_estado");
+        $select->where->equalTo("id_usuario", $id_usuario);
+        $select->where->equalTo("formacion_academica.id_periodo", $id_periodo);
+        $select->order(['formacion_academica.created_at' => 'DESC']);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
+    /**
+     * Obtener formacion_academica de un período específico
+     */
+    public function getByPeriodo($id_periodo)
+    {
+        if (empty($id_periodo)) {
+            return [];
+        }
+
+        $select = $this->getSql()->select();
+        $select->join(["u" => "usuario"], "u.usuario = formacion_academica.id_usuario");
+        $select->join(["e" => "estado"], "e.id_estado = formacion_academica.id_estado");
+        $select->where->equalTo("formacion_academica.id_periodo", $id_periodo);
+        $select->order(['formacion_academica.created_at' => 'DESC']);
+        
+        $data = $this->selectWith($select)->toArray();
+        return $data;
+    }
+
+    /**
      * Obtener formación académica del período activo solamente
      */
     public function getFormacionAcademicaPeriodoActual()
