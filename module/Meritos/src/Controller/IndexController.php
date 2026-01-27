@@ -2259,6 +2259,20 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                         $this->saveLog($id_admin, 'Se activó el período ID: ' . $periodo_id);
                         $this->flashMessenger()->addSuccessMessage('Período activado exitosamente.');
                         break;
+
+                    case 'desactivar_periodo':
+                        $periodo_id = $this->getRequest()->getPost('periodo_id');
+                        
+                        $sql = $periodosTable->getSql();
+                        $update = $sql->update();
+                        $update->set(['estado' => 'inactivo']);
+                        $update->where(['id_periodo' => $periodo_id]);
+                        $statement = $sql->prepareStatementForSqlObject($update);
+                        $statement->execute();
+                        
+                        $this->saveLog($id_admin, 'Se desactivó el período ID: ' . $periodo_id);
+                        $this->flashMessenger()->addSuccessMessage('Período desactivado exitosamente.');
+                        break;
                         
                     case 'editar_periodo':
                         $periodo_id = $this->getRequest()->getPost('periodo_id');
@@ -2296,9 +2310,9 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                         $update->where(['id_periodo' => $periodo_id]);
                         $statement = $sql->prepareStatementForSqlObject($update);
                         $statement->execute();
-                        
+
                         $this->saveLog($id_admin, 'Se cerró el período ID: ' . $periodo_id);
-                        $this->flashMessenger()->addSuccessMessage('Período cerrado exitosamente.');
+                        $this->flashMessenger()->addSuccessMessage('Período cerrado.');
                         break;
                         
                     case 'eliminar_periodo':
