@@ -972,6 +972,99 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
             $investigaciones = $investigacionesTable->getInvestigacionesPeriodoActual();
         }
+        
+        // Inicializar el servicio de validación de puntajes
+        $puntajeValidator = new \Meritos\Services\PuntajeValidatorService($this->adapter);
+        
+        // Procesar todas las solicitudes para agregar información de límites
+        $todasLasSolicitudes = [];
+        
+        // Procesar PREMIOS
+        foreach ($premios as &$premio) {
+            $categoria = 'premios';
+            $premio['categoria'] = $categoria;
+            $premio['tabla'] = 'premios';
+            $premio['id_merito'] = $premio['id_premio']; // Normalizar ID
+            
+            // Verificar límites del usuario
+            $premio['categoria_limite_alcanzado'] = $puntajeValidator->categoriaLimiteAlcanzado($premio['id_usuario'], $categoria);
+            $premio['limite_total_alcanzado'] = $puntajeValidator->limiteTotalAlcanzado($premio['id_usuario']);
+            $premio['puntaje_categoria_actual'] = $puntajeValidator->obtenerPuntajeActual($premio['id_usuario'], $categoria);
+            $premio['puntaje_total_actual'] = $puntajeValidator->obtenerPuntajeTotal($premio['id_usuario']);
+            
+            // Determinar información adicional para tooltip y estado visual
+            $premio = $this->agregarInformacionEstado($premio, $puntajeValidator, $categoria);
+            
+            $todasLasSolicitudes[] = $premio;
+        }
+        
+        // Procesar CARGOS
+        foreach ($cargos as &$cargo) {
+            $categoria = 'cargos';
+            $cargo['categoria'] = $categoria;
+            $cargo['tabla'] = 'cargos';
+            $cargo['id_merito'] = $cargo['id_cargo']; // Normalizar ID
+            
+            $cargo['categoria_limite_alcanzado'] = $puntajeValidator->categoriaLimiteAlcanzado($cargo['id_usuario'], $categoria);
+            $cargo['limite_total_alcanzado'] = $puntajeValidator->limiteTotalAlcanzado($cargo['id_usuario']);
+            $cargo['puntaje_categoria_actual'] = $puntajeValidator->obtenerPuntajeActual($cargo['id_usuario'], $categoria);
+            $cargo['puntaje_total_actual'] = $puntajeValidator->obtenerPuntajeTotal($cargo['id_usuario']);
+            
+            $cargo = $this->agregarInformacionEstado($cargo, $puntajeValidator, $categoria);
+            
+            $todasLasSolicitudes[] = $cargo;
+        }
+        
+        // Procesar CAPACITACIÓN PROFESIONAL
+        foreach ($capacitacionList as &$capacitacion) {
+            $categoria = 'capacitacion_profesional';
+            $capacitacion['categoria'] = $categoria;
+            $capacitacion['tabla'] = 'capacitacion_profesional';
+            $capacitacion['id_merito'] = $capacitacion['id_capacitacion']; // Normalizar ID
+            
+            $capacitacion['categoria_limite_alcanzado'] = $puntajeValidator->categoriaLimiteAlcanzado($capacitacion['id_usuario'], $categoria);
+            $capacitacion['limite_total_alcanzado'] = $puntajeValidator->limiteTotalAlcanzado($capacitacion['id_usuario']);
+            $capacitacion['puntaje_categoria_actual'] = $puntajeValidator->obtenerPuntajeActual($capacitacion['id_usuario'], $categoria);
+            $capacitacion['puntaje_total_actual'] = $puntajeValidator->obtenerPuntajeTotal($capacitacion['id_usuario']);
+            
+            $capacitacion = $this->agregarInformacionEstado($capacitacion, $puntajeValidator, $categoria);
+            
+            $todasLasSolicitudes[] = $capacitacion;
+        }
+        
+        // Procesar FORMACIÓN ACADÉMICA
+        foreach ($formacionList as &$formacion) {
+            $categoria = 'formacion_academica';
+            $formacion['categoria'] = $categoria;
+            $formacion['tabla'] = 'formacion_academica';
+            $formacion['id_merito'] = $formacion['id_formacion_academica']; // Normalizar ID
+            
+            $formacion['categoria_limite_alcanzado'] = $puntajeValidator->categoriaLimiteAlcanzado($formacion['id_usuario'], $categoria);
+            $formacion['limite_total_alcanzado'] = $puntajeValidator->limiteTotalAlcanzado($formacion['id_usuario']);
+            $formacion['puntaje_categoria_actual'] = $puntajeValidator->obtenerPuntajeActual($formacion['id_usuario'], $categoria);
+            $formacion['puntaje_total_actual'] = $puntajeValidator->obtenerPuntajeTotal($formacion['id_usuario']);
+            
+            $formacion = $this->agregarInformacionEstado($formacion, $puntajeValidator, $categoria);
+            
+            $todasLasSolicitudes[] = $formacion;
+        }
+        
+        // Procesar INVESTIGACIONES
+        foreach ($investigaciones as &$investigacion) {
+            $categoria = 'investigaciones';
+            $investigacion['categoria'] = $categoria;
+            $investigacion['tabla'] = 'investigaciones';
+            $investigacion['id_merito'] = $investigacion['id_investigacion']; // Normalizar ID
+            
+            $investigacion['categoria_limite_alcanzado'] = $puntajeValidator->categoriaLimiteAlcanzado($investigacion['id_usuario'], $categoria);
+            $investigacion['limite_total_alcanzado'] = $puntajeValidator->limiteTotalAlcanzado($investigacion['id_usuario']);
+            $investigacion['puntaje_categoria_actual'] = $puntajeValidator->obtenerPuntajeActual($investigacion['id_usuario'], $categoria);
+            $investigacion['puntaje_total_actual'] = $puntajeValidator->obtenerPuntajeTotal($investigacion['id_usuario']);
+            
+            $investigacion = $this->agregarInformacionEstado($investigacion, $puntajeValidator, $categoria);
+            
+            $todasLasSolicitudes[] = $investigacion;
+        }
 
         return new ViewModel([
             "data" => $this->authService->getIdentity()->getData(), 
@@ -981,8 +1074,48 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             "formacion" => $formacionList, 
             "investigaciones" => $investigaciones,
             "categoriaActual" => $categoriaFiltro,
-            "periodoActivo" => $periodoActivo[0]
+            "periodoActivo" => $periodoActivo[0],
+            "puntajeValidator" => $puntajeValidator, // Para usar en la vista si es necesario
+            "todasLasSolicitudes" => $todasLasSolicitudes // Array unificado con toda la información
         ]);
+    }
+
+    /**
+     * Método auxiliar para agregar información de estado y tooltips
+     */
+    private function agregarInformacionEstado($solicitud, $puntajeValidator, $categoria) {
+        // Determinar color del badge y tooltip según el estado
+        switch($solicitud['nombre_estado']) {
+            case 'Ingresada - Límite Alcanzado':
+                $solicitud['color'] = 'secondary';
+                $solicitud['tooltip'] = "Este docente ya alcanzó el límite de {$puntajeValidator::LIMITES[$categoria]} puntos en esta categoría";
+                break;
+            case 'Ingresada - Sin Efecto':
+                $solicitud['color'] = 'dark';
+                $solicitud['tooltip'] = 'Este docente ya alcanzó el límite total de 30 puntos';
+                break;
+            case 'Ingresada':
+                $solicitud['color'] = 'info';
+                $solicitud['tooltip'] = 'Solicitud pendiente de calificación';
+                break;
+            case 'Aceptada':
+                $solicitud['color'] = 'success';
+                $solicitud['tooltip'] = 'Solicitud aceptada y puntos otorgados';
+                break;
+            case 'Rechazada':
+                $solicitud['color'] = 'danger';
+                $solicitud['tooltip'] = 'Solicitud rechazada';
+                break;
+            default:
+                $solicitud['color'] = $solicitud['color'] ?? 'secondary';
+                $solicitud['tooltip'] = '';
+        }
+        
+        // Agregar información adicional para mostrar en la vista
+        $solicitud['limite_categoria'] = $puntajeValidator::LIMITES[$categoria];
+        $solicitud['limite_total'] = $puntajeValidator::LIMITE_TOTAL;
+        
+        return $solicitud;
     }
 
 
@@ -1745,6 +1878,41 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 ]);
             }
         }
+    }
+
+    // En IndexController.php
+    public function cambiarEstadoMeritoAction() {
+        $id_merito = $this->params()->fromPost('id_merito');
+        $tabla = $this->params()->fromPost('tabla');
+        $nuevo_estado = $this->params()->fromPost('estado');
+        
+        // Obtener datos del mérito
+        $sql = "SELECT id_usuario FROM {$tabla} WHERE id = ?";
+        $statement = $this->adapter->createStatement($sql);
+        $result = $statement->execute([$id_merito]);
+        $merito = $result->current();
+        
+        if (!$merito) {
+            return new \Laminas\View\Model\JsonModel(['exito' => false, 'mensaje' => 'Mérito no encontrado']);
+        }
+        
+        // Obtener ID del nuevo estado
+        $sqlEstado = "SELECT id_estado FROM estado WHERE nombre_estado = ?";
+        $stmtEstado = $this->adapter->createStatement($sqlEstado);
+        $resultEstado = $stmtEstado->execute([$nuevo_estado]);
+        $estadoRow = $resultEstado->current();
+        $idEstado = $estadoRow['id_estado'];
+        
+        // Actualizar el mérito
+        $sqlUpdate = "UPDATE {$tabla} SET id_estado = ? WHERE id = ?";
+        $stmtUpdate = $this->adapter->createStatement($sqlUpdate);
+        $stmtUpdate->execute([$idEstado, $id_merito]);
+        
+        // IMPORTANTE: Recalcular todos los estados del docente después del cambio
+        $puntajeValidator = new \Meritos\Services\PuntajeValidatorService($this->adapter);
+        $puntajeValidator->recalcularEstadosDocente($merito['id_usuario']);
+        
+        return new \Laminas\View\Model\JsonModel(['exito' => true, 'mensaje' => 'Estado actualizado correctamente']);
     }
 
     private function getEstadoTexto($idEstado) {
