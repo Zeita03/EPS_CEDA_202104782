@@ -1,4 +1,42 @@
-/* Contenedor de la celebración */
+/* Mensaje de felicitaciones */
+.celebration-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px 40px;
+    border-radius: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: messageAnimation 7s ease-in-out;
+    opacity: 0;
+    max-width: 600px;
+}
+
+@keyframes messageAnimation {
+    0% { 
+        opacity: 0; 
+        transform: translate(-50%, -50%) scale(0.3) rotateY(180deg); 
+    }
+    15% { 
+        opacity: 1; 
+        transform: translate(-50%, -50%) scale(1.1) rotateY(0deg); 
+    }
+    85% { 
+        opacity: 1; 
+        transform: translate(-50%, -50%) scale(1) rotateY(0deg); 
+    }
+    100% { 
+        opacity: 0; 
+        transform: translate(-50%, -50%) scale(0.8) rotateY(-180deg); 
+    }
+}
+
+/* Mantener el resto del CSS igual... */
 .celebration-container {
     position: fixed;
     top: 0;
@@ -10,44 +48,6 @@
     overflow: hidden;
 }
 
-/* Mensaje de felicitaciones */
-.celebration-message {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 30px 50px;
-    border-radius: 20px;
-    font-size: 28px;
-    font-weight: bold;
-    text-align: center;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    animation: messageAnimation 4s ease-in-out;
-    opacity: 0;
-}
-
-@keyframes messageAnimation {
-    0% { 
-        opacity: 0; 
-        transform: translate(-50%, -50%) scale(0.3) rotateY(180deg); 
-    }
-    20% { 
-        opacity: 1; 
-        transform: translate(-50%, -50%) scale(1.1) rotateY(0deg); 
-    }
-    80% { 
-        opacity: 1; 
-        transform: translate(-50%, -50%) scale(1) rotateY(0deg); 
-    }
-    100% { 
-        opacity: 0; 
-        transform: translate(-50%, -50%) scale(0.8) rotateY(-180deg); 
-    }
-}
-
-/* Confeti */
 .confetti {
     position: absolute;
     width: 10px;
@@ -74,7 +74,6 @@
     }
 }
 
-/* Globos */
 .balloon {
     position: absolute;
     width: 80px;
@@ -117,7 +116,6 @@
     }
 }
 
-/* Estrellas brillantes */
 .star {
     position: absolute;
     width: 4px;
@@ -132,9 +130,8 @@
     50% { opacity: 1; transform: scale(1); }
 }
 
-/* Fade out para todo el contenedor */
 .celebration-fade-out {
-    animation: fadeOut 1s ease-out forwards;
+    animation: fadeOut 1.5s ease-out forwards;
 }
 
 @keyframes fadeOut {

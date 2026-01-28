@@ -139,7 +139,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
     /**
      * Enviar constancia de méritos completados
      */
-    public function enviarConstanciaAcademicos($email, $nombreUsuario, $datosConstancia) {
+    public function enviarConstanciaAcademicos($email, $nombreUsuario, $datosConstancia, $validaciones = null) {
         $mailManager = new \Utilidades\Service\MailManager();
 
         // Construir tabla de méritos
@@ -163,10 +163,40 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             </tr>";
         }
 
+        // Determinar categorías faltantes
+        $categoriasFaltantes = [];
+        if ($validaciones) {
+            $mapeoCategories = [
+                'premios' => 'Premios',
+                'cargos' => 'Cargos Desempeñados',
+                'formacion' => 'Formación Académica',
+                'capacitacion' => 'Capacitación Profesional',
+                'investigaciones' => 'Investigaciones/Publicaciones'
+            ];
+
+            foreach ($validaciones as $categoria => $tieneMeritos) {
+                if (!$tieneMeritos && isset($mapeoCategories[$categoria])) {
+                    $categoriasFaltantes[] = $mapeoCategories[$categoria];
+                }
+            }
+        }
+
+        // Generar mensaje sobre categorías faltantes
+        $mensajeCategoriasFaltantes = '';
+        if (!empty($categoriasFaltantes)) {
+            $listaCategorias = implode(', ', $categoriasFaltantes);
+            $mensajeCategoriasFaltantes = "
+            <div style='background-color:#fff3cd;border-left:4px solid #ffc107;padding:15px;margin:15px 0;border-radius:4px'>
+                <p style='margin:0;color:#856404;font-family:Nunito,Arial,sans-serif;font-size:13px;line-height:160%'>
+                    <strong>📝 Nota Importante:</strong> Si no ha subido algún mérito académico en las siguientes categorías: <strong>{$listaCategorias}</strong> y no le corresponde, se le asignará un puntaje de 0 pts en dichas categorías.
+                </p>
+            </div>";
+        }
+
         $htmlMail = '<!DOCTYPE html>
         <html lang="es" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
         <head>
-            <title>Constancia de Carga de Méritos</title>
+            <title>Confirmación de Carga de Méritos</title>
             <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
             <meta content="width=device-width,initial-scale=1" name="viewport" />
             <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet" type="text/css" />
@@ -187,6 +217,26 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 table {
                     border-collapse: collapse;
                 }
+                .two-columns {
+                    width: 100%;
+                    display: table;
+                }
+                .column {
+                    width: 48%;
+                    display: table-cell;
+                    vertical-align: top;
+                    padding: 0 1%;
+                }
+                @media only screen and (max-width: 480px) {
+                    .two-columns, .column {
+                        width: 100% !important;
+                        display: block !important;
+                    }
+                    .column {
+                        padding: 0 !important;
+                        margin-bottom: 15px;
+                    }
+                }
             </style>
         </head>
         <body style="background-color:#fff;margin:0;padding:0;">
@@ -205,8 +255,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                                         <td>
                                             <table align="center" border="0" cellpadding="0" cellspacing="0"
                                                 class="row-content stack" role="presentation"
-                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:500px"
-                                                width="500">
+                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:600px"
+                                                width="600">
                                                 <tbody>
                                                     <tr>
                                                         <td class="column column-1"
@@ -214,8 +264,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                                                             width="100%">
                                                             <div align="center" style="line-height:10px">
                                                                 <img src="https://farusac.edu.gt/wp-content/uploads/2022/10/headerfarusaclogos.png"
-                                                                    style="display:block;height:auto;border:0;width:410px;max-width:100%"
-                                                                    width="410" />
+                                                                    style="display:block;height:auto;border:0;width:500px;max-width:100%"
+                                                                    width="500" />
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -235,8 +285,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                                         <td>
                                             <table align="center" border="0" cellpadding="0" cellspacing="0"
                                                 class="row-content stack" role="presentation"
-                                                style="mso-table-lspace:0;mso-table-rspace:0;background-color:#f2f2f2;border-radius:40px 0;color:#000;width:500px;padding:30px 20px"
-                                                width="500">
+                                                style="mso-table-lspace:0;mso-table-rspace:0;background-color:#f2f2f2;border-radius:40px 0;color:#000;width:600px;padding:30px 20px"
+                                                width="600">
                                                 <tbody>
                                                     <tr>
                                                         <td class="column column-1"
@@ -244,33 +294,33 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                                                             width="100%">
                                                             
                                                             <!-- TÍTULO -->
-                                                            <h1 style="margin:20px 0 20px 0;color:#041d3c;font-family:Nunito,Arial,sans-serif;font-size:26px;font-weight:bold;text-align:center;line-height:120%;padding-top:15px">
-                                                                Constancia de Carga de Méritos Académicos
+                                                            <h1 style="margin:20px 0 20px 0;color:#041d3c;font-family:Nunito,Arial,sans-serif;font-size:24px;font-weight:bold;text-align:center;line-height:120%;padding-top:15px">
+                                                                Confirmación de Carga de Méritos Académicos
                                                             </h1>
 
                                                             <!-- SALUDO -->
-                                                            <p style="margin:0 0 15px 0;color:#333;font-family:Nunito,Arial,sans-serif;font-size:15px;line-height:160%">
+                                                            <p style="margin:0 0 20px 0;color:#333;font-family:Nunito,Arial,sans-serif;font-size:15px;line-height:160%">
                                                                 Estimado(a) <strong>' . htmlspecialchars($nombreUsuario) . '</strong>,
                                                             </p>
 
                                                             <!-- MENSAJE PRINCIPAL -->
-                                                            <p style="margin:0 0 15px 0;color:#555;font-family:Nunito,Arial,sans-serif;font-size:14px;line-height:160%">
-                                                                Nos complace informarle que ha <strong>completado exitosamente</strong> la carga de méritos académicos en el sistema CEDA (Comisión de Evaluación Docente de Arquitectura).
+                                                            <p style="margin:0 0 20px 0;color:#555;font-family:Nunito,Arial,sans-serif;font-size:14px;line-height:160%">
+                                                                Le confirmamos que ha <strong>generado exitosamente</strong> su constancia de carga de méritos académicos en el sistema CEDA (Comisión de Evaluación Docente de Arquitectura).
                                                             </p>
 
                                                             <p style="margin:0 0 20px 0;color:#555;font-family:Nunito,Arial,sans-serif;font-size:14px;line-height:160%">
-                                                                A continuación se muestra un resumen de los méritos cargados:
+                                                                A continuación se muestra un resumen de los méritos cargados en el sistema:
                                                             </p>
 
-                                                            <!-- TABLA DE MÉRITOS -->
-                                                            <table style="width:100%;border-collapse:collapse;margin:0 0 20px 0;background:#fff;border:1px solid #ddd;border-radius:5px;overflow:hidden">
+                                                            <!-- TABLA DE RESUMEN -->
+                                                            <table style="width:100%;border-collapse:collapse;margin:0 0 25px 0;background:#fff;border:1px solid #ddd;border-radius:5px;overflow:hidden">
                                                                 <thead>
                                                                     <tr style="background-color:#041d3c;color:white">
                                                                         <th style="padding:12px;border:1px solid #ddd;text-align:left;font-weight:bold;font-family:Nunito,Arial,sans-serif;font-size:14px">
                                                                             Tipo de Mérito
                                                                         </th>
                                                                         <th style="padding:12px;border:1px solid #ddd;text-align:center;font-weight:bold;font-family:Nunito,Arial,sans-serif;font-size:14px">
-                                                                            Cantidad
+                                                                            Cantidad Cargada
                                                                         </th>
                                                                     </tr>
                                                                 </thead>
@@ -287,28 +337,46 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                                                                 </tbody>
                                                             </table>
 
-                                                            <!-- PRÓXIMOS PASOS -->
-                                                            <div style="background-color:#e7f3ff;border-left:4px solid #2196F3;padding:15px;margin:20px 0;border-radius:4px">
-                                                                <p style="margin:0 0 10px 0;color:#0c5ba7;font-family:Nunito,Arial,sans-serif;font-size:14px;font-weight:bold">
-                                                                    📋 Próximos Pasos:
-                                                                </p>
-                                                                <ul style="margin:0;padding-left:20px;color:#0c5ba7;font-family:Nunito,Arial,sans-serif;font-size:13px;line-height:180%">
-                                                                    <li>Permanezca atento a las notificaciones en su plataforma</li>
-                                                                    <li>Sus méritos serán evaluados por el comité correspondiente</li>
-                                                                    <li>Podrá visualizar el estado de cada mérito en tiempo real</li>
-                                                                    <li>Las calificaciones estarán disponibles en su dashboard</li>
-                                                                </ul>
-                                                            </div>
+                                                            <!-- LAYOUT -->
+                                                            <div class="two-columns" style="margin: 20px 0;">
+                                                                <!-- COLUMNA IZQUIERDA -->
+                                                                <div class="column">
+                                                                    <!-- MENSAJE IMPORTANTE SOBRE EVALUACIÓN -->
+                                                                    <div style="background-color:#e3f2fd;border-left:4px solid #2196F3;padding:15px;margin:0 0 15px 0;border-radius:4px">
+                                                                        <p style="margin:0;color:#0d47a1;font-family:Nunito,Arial,sans-serif;font-size:13px;line-height:160%;font-weight:bold">
+                                                                            ⚠️ Información Importante: Los méritos académicos cargados en el sistema están sujetos aún a evaluación por parte del comité correspondiente.
+                                                                        </p>
+                                                                    </div>
 
-                                                            <!-- RECORDATORIO -->
-                                                            <div style="background-color:#fff3cd;border-left:4px solid #ffc107;padding:15px;margin:20px 0;border-radius:4px">
-                                                                <p style="margin:0;color:#856404;font-family:Nunito,Arial,sans-serif;font-size:13px;line-height:160%">
-                                                                    <strong>💡 Importante:</strong> Esta constancia verifica que ha completado la carga de al menos un mérito en cada categoría dentro del período activo del sistema.
-                                                                </p>
+                                                                    <!-- PRÓXIMOS PASOS -->
+                                                                    <div style="background-color:#e7f3ff;border-left:4px solid #2196F3;padding:15px;margin:0;border-radius:4px">
+                                                                        <p style="margin:0 0 10px 0;color:#0c5ba7;font-family:Nunito,Arial,sans-serif;font-size:13px;font-weight:bold">
+                                                                            📋 Próximos Pasos:
+                                                                        </p>
+                                                                        <ul style="margin:0;padding-left:15px;color:#0c5ba7;font-family:Nunito,Arial,sans-serif;font-size:12px;line-height:160%">
+                                                                            <li>Permanezca atento a las notificaciones en su plataforma</li>
+                                                                            <li>Sus méritos serán evaluados por el comité académico</li>
+                                                                            <li>Podrá visualizar el estado de cada mérito en tiempo real</li>
+                                                                            <li>Los puntajes finales estarán disponibles una vez completada la evaluación</li>
+                                                                        </ul>
+                                                                    </div>
+                                                                </div>
+
+                                                                <!-- COLUMNA DERECHA -->
+                                                                <div class="column">
+                                                                    ' . $mensajeCategoriasFaltantes . '
+
+                                                                    <!-- RECORDATORIO -->
+                                                                    <div style="background-color:#f8f9fa;border-left:4px solid #6c757d;padding:15px;margin:0;border-radius:4px">
+                                                                        <p style="margin:0;color:#495057;font-family:Nunito,Arial,sans-serif;font-size:12px;line-height:160%">
+                                                                            <strong>💡 Recordatorio:</strong> Esta confirmación certifica que ha cargado sus méritos en el sistema durante el período activo. Los puntajes finales serán asignados posterior a la evaluación del comité académico.
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
                                                             </div>
 
                                                             <!-- CIERRE -->
-                                                            <p style="margin:20px 0 0 0;color:#666;font-family:Nunito,Arial,sans-serif;font-size:13px;line-height:160%;text-align:center">
+                                                            <p style="margin:30px 0 0 0;color:#666;font-family:Nunito,Arial,sans-serif;font-size:13px;line-height:160%;text-align:center">
                                                                 Cualquier duda o inconveniente, no dude en contactar al equipo de soporte.<br>
                                                                 <strong>Gracias por participar en el sistema CEDA</strong>
                                                             </p>
@@ -331,8 +399,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                                         <td>
                                             <table align="center" border="0" cellpadding="0" cellspacing="0"
                                                 class="row-content stack" role="presentation"
-                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:500px;padding:20px"
-                                                width="500">
+                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:600px;padding:20px"
+                                                width="600">
                                                 <tbody>
                                                     <tr>
                                                         <td style="text-align:center">
@@ -354,7 +422,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         </body>
         </html>';
 
-        $mailManager->sendGeneralMessage($email, "CEDA - Constancia de Carga de Méritos Académicos", $htmlMail);
+        $mailManager->sendGeneralMessage($email, "CEDA - Confirmación de Carga de Méritos Académicos", $htmlMail);
     }
 
     /**
@@ -409,12 +477,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         // Validar méritos
         $validacion = $this->validarMeritosPorCategoria($id_usuario);
 
-        if (!$validacion['completo']) {
-            // Si falta algún mérito, mostrar error
-            $this->flashMessenger()->addErrorMessage('Debe cargar al menos un mérito en cada categoría para generar la constancia.');
-            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "misSolicitudes"]);
-        }
-
         // Obtener datos del usuario
         $usuario = $userTable->getUserById($id_usuario);
         
@@ -428,7 +490,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $this->enviarConstanciaAcademicos(
                 $usuario[0]['email'],
                 $usuario[0]['nombre'],
-                $validacion['conteos']
+                $validacion['conteos'],
+                $validacion['validaciones']
             );
 
             // Registrar en log

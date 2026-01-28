@@ -423,8 +423,7 @@ function validateFile(input) {
     alert("File size exceeds 2 MiB");
     // $(file).val(''); //for clearing with Jquery
   } else {
-    // Proceed further
-    console.log("Todo ok");
+    console.log("ok");
   }
 }
 
@@ -609,7 +608,6 @@ function validateSubCategoriaDocument(selectObject) {
 function validateFormacion(selectObject) {
   const value = selectObject.value;
   if (value == "nivel_intermedio") {
-    console.log("Es nivel intermedio");
     document.querySelector("#graduado").checked = true;
     document.querySelector("#pensum").disabled = true;
     document.querySelector("#label_year").innerHTML = "Año de graduación *";
@@ -832,7 +830,6 @@ function validatePtsEvent(selectObject) {
   const value = selectObject.value;
   //console.log(value);
   let valueObject = eventosSelect.find((e) => e.value == value);
-  console.log(valueObject);
   setMinAndMax(valueObject.min, valueObject.max);
 
   document.querySelector("#label_pts").innerHTML = valueObject.puntos;
