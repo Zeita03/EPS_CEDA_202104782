@@ -16,8 +16,12 @@ class CelebrationManager {
         const message = document.createElement('div');
         message.className = 'celebration-message';
         message.innerHTML = `
-            <div style="font-size: 32px; margin-bottom: 10px;">🎉 ¡FELICITACIONES! 🎉</div>
-            <div style="font-size: 20px; font-weight: normal;">Has culminado exitosamente tu carga de méritos académicos</div>
+            <div style="font-size: 32px; margin-bottom: 15px;">🎉 ¡FELICITACIONES! 🎉</div>
+            <div style="font-size: 20px; font-weight: normal; margin-bottom: 20px;">Has culminado exitosamente tu carga de méritos académicos</div>
+            <div style="font-size: 14px; background-color: rgba(255,255,255,0.1); padding: 15px; border-radius: 10px; border-left: 4px solid #ffd700; margin-top: 20px; line-height: 1.4;">
+                <strong>⚠️ Información Importante:</strong><br>
+                Los méritos académicos cargados en el sistema están sujetos aún a evaluación por parte del comité correspondiente.
+            </div>
         `;
         return message;
     }
@@ -29,8 +33,8 @@ class CelebrationManager {
             const piece = document.createElement('div');
             piece.className = 'confetti';
             piece.style.left = Math.random() * 100 + '%';
-            piece.style.animationDelay = Math.random() * 2 + 's';
-            piece.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            piece.style.animationDelay = Math.random() * 3 + 's';
+            piece.style.animationDuration = (Math.random() * 3 + 3) + 's';
             confetti.push(piece);
         }
         return confetti;
@@ -45,8 +49,8 @@ class CelebrationManager {
             const balloon = document.createElement('div');
             balloon.className = `balloon balloon-${colors[i % colors.length]}`;
             balloon.style.left = (Math.random() * 80 + 10) + '%';
-            balloon.style.animationDelay = (Math.random() * 1) + 's';
-            balloon.style.animationDuration = (Math.random() * 1 + 3) + 's';
+            balloon.style.animationDelay = (Math.random() * 2) + 's';
+            balloon.style.animationDuration = (Math.random() * 2 + 5) + 's';
             balloons.push(balloon);
         }
         return balloons;
@@ -60,7 +64,7 @@ class CelebrationManager {
             star.className = 'star';
             star.style.left = Math.random() * 100 + '%';
             star.style.top = Math.random() * 100 + '%';
-            star.style.animationDelay = Math.random() * 2 + 's';
+            star.style.animationDelay = Math.random() * 3 + 's';
             stars.push(star);
         }
         return stars;
@@ -90,15 +94,15 @@ class CelebrationManager {
         // Reproducir sonido de celebración (opcional)
         this.playSound();
 
-        // Remover después de 5 segundos
+        // Remover después de 8 segundos
         setTimeout(() => {
             container.classList.add('celebration-fade-out');
             setTimeout(() => {
                 if (container.parentNode) {
                     container.parentNode.removeChild(container);
                 }
-            }, 1000);
-        }, 4000);
+            }, 1500);
+        }, 7000);
     }
 
     // Reproducir sonido (opcional)
@@ -108,7 +112,7 @@ class CelebrationManager {
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             
             // Crear una melodía simple de celebración
-            const frequencies = [523.25, 659.25, 783.99, 1046.50]; // Do, Mi, Sol, Do
+            const frequencies = [523.25, 659.25, 783.99, 1046.50];
             
             frequencies.forEach((freq, index) => {
                 setTimeout(() => {
