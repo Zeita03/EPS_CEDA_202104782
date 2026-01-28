@@ -1,4 +1,7 @@
-
+<?php
+$this->headLink()->appendStylesheet($this->basePath() . '/css/celebracion.css');
+$this->headScript()->appendFile($this->basePath() . '/js/celebracion.js');
+?>
 
 <div class="container-fluid">
 
@@ -6,7 +9,7 @@
     <div class="row">
 
         <!-- Premios -->
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-4 col-md-6 mb-4">
             <div class="card border-left-1 shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
@@ -37,7 +40,7 @@
         </div>
 
         <!-- Investigaciones/publicaciones -->
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-4 col-md-6 mb-4">
             <div class="card border-left-2 shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
@@ -66,7 +69,7 @@
         </div>
 
         <!-- Formación académica -->
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-4 col-md-6 mb-4">
             <div class="card border-left-3 shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
@@ -93,9 +96,14 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Content Row -->
+
+    <div class="row">
 
         <!-- Cargos desempeñados -->
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-4 col-md-6 mb-4">
             <div class="card border-left-4 shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
@@ -123,12 +131,9 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Content Row -->
-
-    <div class="row">
-        <div class="col-xl-3 col-md-6 mb-4">
+        <!-- Capacitación profesional -->
+        <div class="col-xl-4 col-md-6 mb-4">
             <div class="card border-left-5 shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
@@ -155,8 +160,9 @@
                 </div>
             </div>
         </div>
+
         <!-- Puntos totales -->
-        <div class="col-xl-3 col-md-6 mb-4">
+        <div class="col-xl-4 col-md-6 mb-4">
             <div class="card border-left-6 shadow h-100 py-2">
                 <div class="card-body">
                     <div class="row no-gutters align-items-center">
@@ -186,7 +192,19 @@
 
 
     <!-- Page Heading -->
-    <h1 class="h3 mb-2 text-gray-800">Mis solicitudes</h1>
+    <div class="row mb-4">
+        <div class="col-6">
+            <h1 class="h3 text-gray-800">Mis solicitudes</h1>
+        </div>
+        <div class="col-6 d-flex justify-content-end align-items-center">
+            <a 
+                id="btnGenerarConstancia" 
+                class="btn btn-success btn-lg"
+                href="<?= $this->url("meritosHome/meritos", ["action" => "generarConstancia"]) ?>">
+                <i class="fas fa-file-pdf"></i> Proceso finalizado - Generar Constancia
+            </a>
+        </div>
+    </div>
 
     <!-- Modal para mostrar el archivo -->
     <div class="modal fade" id="modalPdf" tabindex="-1" aria-labelledby="modalPdf" aria-hidden="true">
@@ -349,7 +367,6 @@
 
 <script>
     function cargarInfo(puntos, puntosTotales){
-        console.log(puntos);
         let premios = 2;
         let investigaciones = 6;
         let capacitacion = 8;
@@ -385,4 +402,28 @@
     }
 
     cargarInfo(<?= json_encode($this->puntos[0]) ?> , <?= $miPuntaje ?> );
+
+    // Event listener para el botón
+    document.getElementById('btnGenerarConstancia').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Mostrar confirmación
+        Swal.fire({
+            title: '📄 Generar Constancia',
+            html: '¿Desea generar y enviar la constancia de méritos a su correo electrónico?<br><small class="text-muted">Se enviará a la dirección registrada en el sistema.</small>',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, generar',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#28a745',
+            cancelButtonColor: '#6c757d'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                iniciarCelebracion();
+                setTimeout(() => {
+                    window.location.href = "<?= $this->url("meritosHome/meritos", ["action" => "generarConstancia"]) ?>";
+                }, 2500);
+            }
+        });
+    });
 </script> 

@@ -46,28 +46,45 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         //verificar si tiene el permiso para ingresar a esta acción...
         $authManager = new \Auth\Service\AuthManager($this->authService, $this->adapter);
         
-
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        
         if($nombreAccion == 'premios' || $nombreAccion == 'formacionAcademica' || $nombreAccion == 'cargos' || $nombreAccion == 'investigaciones' || $nombreAccion == 'capacitacionProfesional'){
             
-            $fechaInicial = $settings[0]['startDate'] . " ". $settings[0]['startTime'] .":00";
-            $fechaFinal = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
-
-            date_default_timezone_set('America/Guatemala');
-
-            $datetime1 = new DateTime($fechaInicial);
-            $datetime2 = new DateTime($fechaFinal);
-            $fechahoy = new DateTime("now");
-
-            if( ($fechahoy > $datetime2) || ($fechahoy < $datetime1)){
+            // Verificar si hay un período activo
+            $periodoActivo = $this->obtenerPeriodoActivo();
+            
+            if (!$periodoActivo) {
+                // No hay período activo, redirigir a la vista de período inactivo
                 return $this->redirect()->toRoute("administracionHome/administracion", ["action" => "periodoInactivo"]);
             }
-
+            
+            // Si hay período activo, verificar que no haya expirado (verificación adicional por si acaso)
+            date_default_timezone_set('America/Guatemala');
+            $fechaHoraActual = new DateTime("now");
+            $fechaExpiracion = new DateTime($periodoActivo['fecha_fin'] . " " . $periodoActivo['hora_fin']);
+            
+            if ($fechaHoraActual > $fechaExpiracion) {
+                // El período ya expiró, redirigir a período inactivo
+                return $this->redirect()->toRoute("administracionHome/administracion", ["action" => "periodoInactivo"]);
+            }
         }
 
-        if ($nombreAccion != 'accesoDenegado' && $nombreAccion != 'periodoInactivo' && $nombreAccion != 'premios' && $nombreAccion !='formacionAcademica' && $nombreAccion !='cargos' && $nombreAccion !='investigaciones' && $nombreAccion !='capacitacionProfesional' && $nombreAccion != 'solicitudes' && $nombreAccion != 'misSolicitudes' &&  $nombreAccion != 'configuracion' && $nombreAccion != 'reportes' && $nombreAccion != 'admSolicitudes' && $nombreAccion !='displayfile' && $authManager->verificarPermiso($nombreControlador, $nombreAccion) != true) {
+        if (
+            $nombreAccion != 'accesoDenegado' && 
+            $nombreAccion != 'periodoInactivo' && 
+            $nombreAccion != 'premios' && 
+            $nombreAccion !='formacionAcademica' && 
+            $nombreAccion !='cargos' && 
+            $nombreAccion !='investigaciones' && 
+            $nombreAccion !='capacitacionProfesional' && 
+            $nombreAccion != 'solicitudes' && 
+            $nombreAccion != 'misSolicitudes' &&  
+            $nombreAccion != 'configuracion' && 
+            $nombreAccion != 'reportes' && 
+            $nombreAccion != 'historial' && 
+            $nombreAccion != 'admSolicitudes' && 
+            $nombreAccion !='displayfile' &&
+            $nombreAccion !='generarConstancia' &&
+            $authManager->verificarPermiso($nombreControlador, $nombreAccion) != true
+        ) {
             return $this->redirect()->toRoute("administracionHome/administracion", ["action" => "accesoDenegado"]);
         }
 
@@ -116,163 +133,140 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         header('Accept-Ranges: bytes');
         @readfile($file);
         die;
-        
-        
-        /*echo $content;
-
-
-        $file = getcwd() . '/archivos_privado/mi_archivo.pdf';
-        $filename = 'mi_archivo.pdf';
-        header('Content-type: application/pdf');
-        header('Content-Disposition: inline; filename="' . $filename . '"');
-        header('Content-Transfer-Encoding: binary');
-        header('Content-Length: ' . filesize($file));
-        header('Accept-Ranges: bytes');
-        @readfile($file);
-        die;*/
-
     }
 
 
-    public function sendEmail($email,$nameUser, $estado){
+    /**
+     * Enviar constancia de méritos completados
+     */
+    public function enviarConstanciaAcademicos($email, $nombreUsuario, $datosConstancia, $validaciones = null) {
         $mailManager = new \Utilidades\Service\MailManager();
-        /*$htmlMail = ("Estimado {$nameUser}, 
-                    <br><br>Le informamos que su solicitud de mérito academico ha sido {$estado}.
-                    <br><br>Cualquier inconveniente no dudes en contactarnos.
-                    <br><br>Atentamente,
-                    ");*/
 
-        $htmlMail = ('<!DOCTYPE html>
-        <html lang="en" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
+        // Construir tabla de méritos
+        $filasMeritos = '';
+        $totalMeritos = 0;
+        
+        $meritos = [
+            'Premios' => $datosConstancia['premios'] ?? 0,
+            'Cargos Desempeñados' => $datosConstancia['cargos'] ?? 0,
+            'Formación Académica' => $datosConstancia['formacion'] ?? 0,
+            'Capacitación Profesional' => $datosConstancia['capacitacion'] ?? 0,
+            'Investigaciones/Publicaciones' => $datosConstancia['investigaciones'] ?? 0
+        ];
+
+        foreach ($meritos as $tipo => $cantidad) {
+            $totalMeritos += $cantidad;
+            $filasMeritos .= "
+            <tr>
+                <td style='padding: 12px; border: 1px solid #ddd; text-align: left;'>{$tipo}</td>
+                <td style='padding: 12px; border: 1px solid #ddd; text-align: center;'><strong>{$cantidad}</strong></td>
+            </tr>";
+        }
+
+        // Determinar categorías faltantes
+        $categoriasFaltantes = [];
+        if ($validaciones) {
+            $mapeoCategories = [
+                'premios' => 'Premios',
+                'cargos' => 'Cargos Desempeñados',
+                'formacion' => 'Formación Académica',
+                'capacitacion' => 'Capacitación Profesional',
+                'investigaciones' => 'Investigaciones/Publicaciones'
+            ];
+
+            foreach ($validaciones as $categoria => $tieneMeritos) {
+                if (!$tieneMeritos && isset($mapeoCategories[$categoria])) {
+                    $categoriasFaltantes[] = $mapeoCategories[$categoria];
+                }
+            }
+        }
+
+        // Generar mensaje sobre categorías faltantes
+        $mensajeCategoriasFaltantes = '';
+        if (!empty($categoriasFaltantes)) {
+            $listaCategorias = implode(', ', $categoriasFaltantes);
+            $mensajeCategoriasFaltantes = "
+            <div style='background-color:#fff3cd;border-left:4px solid #ffc107;padding:15px;margin:15px 0;border-radius:4px'>
+                <p style='margin:0;color:#856404;font-family:Nunito,Arial,sans-serif;font-size:13px;line-height:160%'>
+                    <strong>📝 Nota Importante:</strong> Si no ha subido algún mérito académico en las siguientes categorías: <strong>{$listaCategorias}</strong> y no le corresponde, se le asignará un puntaje de 0 pts en dichas categorías.
+                </p>
+            </div>";
+        }
+
+        $htmlMail = '<!DOCTYPE html>
+        <html lang="es" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
         <head>
-            <title></title>
+            <title>Confirmación de Carga de Méritos</title>
             <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
             <meta content="width=device-width,initial-scale=1" name="viewport" />
-            <link href="https://fonts.googleapis.com/css?family=Abril+Fatface" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Alegreya" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Arvo" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Bitter" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Cabin" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Ubuntu" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet" type="text/css" />
-            <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet" type="text/css" /><!--<![endif]-->
+            <link href="https://fonts.googleapis.com/css?family=Nunito" rel="stylesheet" type="text/css" />
             <style>
                 * {
-                    box-sizing: border-box
+                    box-sizing: border-box;
                 }
-
                 body {
                     margin: 0;
-                    padding: 0
+                    padding: 0;
+                    -webkit-text-size-adjust: none;
+                    text-size-adjust: none;
                 }
-
                 a[x-apple-data-detectors] {
                     color: inherit !important;
-                    text-decoration: inherit !important
+                    text-decoration: inherit !important;
                 }
-
-                #MessageViewBody a {
-                    color: inherit;
-                    text-decoration: none
+                table {
+                    border-collapse: collapse;
                 }
-
-                p {
-                    line-height: inherit
+                .two-columns {
+                    width: 100%;
+                    display: table;
                 }
-
-                .desktop_hide,
-                .desktop_hide table {
-                    mso-hide: all;
-                    display: none;
-                    max-height: 0;
-                    overflow: hidden
+                .column {
+                    width: 48%;
+                    display: table-cell;
+                    vertical-align: top;
+                    padding: 0 1%;
                 }
-
-                @media (max-width:520px) {
-                    .desktop_hide table.icons-inner {
-                        display: inline-block !important
+                @media only screen and (max-width: 480px) {
+                    .two-columns, .column {
+                        width: 100% !important;
+                        display: block !important;
                     }
-
-                    .icons-inner {
-                        text-align: center
-                    }
-
-                    .icons-inner td {
-                        margin: 0 auto
-                    }
-
-                    .row-content {
-                        width: 100% !important
-                    }
-
-                    .mobile_hide {
-                        display: none
-                    }
-
-                    .stack .column {
-                        width: 100%;
-                        display: block
-                    }
-
-                    .mobile_hide {
-                        min-height: 0;
-                        max-height: 0;
-                        max-width: 0;
-                        overflow: hidden;
-                        font-size: 0
-                    }
-
-                    .desktop_hide,
-                    .desktop_hide table {
-                        display: table !important;
-                        max-height: none !important
-                    }
-
-                    .row-2 .column-1 .block-2.heading_block td.pad {
-                        padding: 0 20px 20px !important
+                    .column {
+                        padding: 0 !important;
+                        margin-bottom: 15px;
                     }
                 }
             </style>
         </head>
-
-        <body style="background-color:#fff;margin:0;padding:0;-webkit-text-size-adjust:none;text-size-adjust:none">
+        <body style="background-color:#fff;margin:0;padding:0;">
             <table border="0" cellpadding="0" cellspacing="0" class="nl-container" role="presentation"
                 style="mso-table-lspace:0;mso-table-rspace:0;background-color:#fff" width="100%">
                 <tbody>
                     <tr>
                         <td>
+                            <!-- HEADER -->
                             <table align="center" border="0" cellpadding="0" cellspacing="0" class="row row-1"
-                                role="presentation" style="mso-table-lspace:0;mso-table-rspace:0;background:transparent linear-gradient(180deg, #003470 0%, #041d3c 100%) 0% 0% no-repeat padding-box"
+                                role="presentation" 
+                                style="mso-table-lspace:0;mso-table-rspace:0;background:linear-gradient(180deg, #003470 0%, #041d3c 100%)"
                                 width="100%">
                                 <tbody>
                                     <tr>
                                         <td>
                                             <table align="center" border="0" cellpadding="0" cellspacing="0"
                                                 class="row-content stack" role="presentation"
-                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:500px"
-                                                width="500">
+                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:600px"
+                                                width="600">
                                                 <tbody>
                                                     <tr>
                                                         <td class="column column-1"
-                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:0;padding-bottom:5px;border-top:0;border-right:0;border-bottom:0;border-left:0"
+                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:20px;padding-bottom:20px"
                                                             width="100%">
-                                                            <table border="0" cellpadding="0" cellspacing="0"
-                                                                class="image_block block-1" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
-                                                                <tr>
-                                                                    <td class="pad"
-                                                                        style="padding-bottom:30px;padding-top:20px;width:100%;padding-right:0;padding-left:0">
-                                                                        <div align="center" class="alignment"
-                                                                            style="line-height:10px"><img
-                                                                                src="https://farusac.edu.gt/wp-content/uploads/2022/10/headerfarusaclogos.png"
-                                                                                style="display:block;height:auto;border:0;width:410px;max-width:100%"
-                                                                                width="410" /></div>
-                                                                    </td>
-                                                                </tr>
-                                                            </table>
+                                                            <div align="center" style="line-height:10px">
+                                                                <img src="https://farusac.edu.gt/wp-content/uploads/2022/10/headerfarusaclogos.png"
+                                                                    style="display:block;height:auto;border:0;width:500px;max-width:100%"
+                                                                    width="500" />
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -281,6 +275,8 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                                     </tr>
                                 </tbody>
                             </table>
+
+                            <!-- CONTENIDO PRINCIPAL -->
                             <table align="center" border="0" cellpadding="0" cellspacing="0" class="row row-2"
                                 role="presentation" style="mso-table-lspace:0;mso-table-rspace:0;background-color:#f2f2f2"
                                 width="100%">
@@ -289,77 +285,101 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                                         <td>
                                             <table align="center" border="0" cellpadding="0" cellspacing="0"
                                                 class="row-content stack" role="presentation"
-                                                style="mso-table-lspace:0;mso-table-rspace:0;background-color:#f2f2f2;border-radius:40px 0;color:#000;width:500px"
-                                                width="500">
+                                                style="mso-table-lspace:0;mso-table-rspace:0;background-color:#f2f2f2;border-radius:40px 0;color:#000;width:600px;padding:30px 20px"
+                                                width="600">
                                                 <tbody>
                                                     <tr>
                                                         <td class="column column-1"
-                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:15px;padding-bottom:20px;border-top:0;border-right:0;border-bottom:0;border-left:0"
+                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding:0"
                                                             width="100%">
-                                                            <table border="0" cellpadding="0" cellspacing="0"
-                                                                class="image_block block-1" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
-                                    
-                                                            </table>
-                                                            <table border="0" cellpadding="0" cellspacing="0"
-                                                                class="heading_block block-2" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
-                                                                <tr>
-                                                                    <td class="pad"
-                                                                        style="padding-bottom:20px;text-align:center;width:100%">
-                                                                        <h1
-                                                                            style="margin:0;color:#041d3c;direction:ltr;font-family:Nunito,Arial,Helvetica Neue,Helvetica,sans-serif;font-size:25px;font-weight:400;letter-spacing:normal;line-height:120%;text-align:center;margin-top:0;margin-bottom:0">
-                                                                            <span class="tinyMce-placeholder">Estado de la solicitud</span>
-                                                                        </h1>
-                                                                    </td>
-                                                                </tr>
-                                                            </table>
-                                                            <table border="0" cellpadding="0" cellspacing="0"
-                                                                class="text_block block-3" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0;word-break:break-word"
-                                                                width="100%">
-                                                                <tr>
-                                                                    <td class="pad"
-                                                                        style="padding-bottom:20px;padding-left:20px;padding-right:20px;padding-top:10px">
-                                                                        <div style="font-family:sans-serif">
-                                                                            <div class="txtTinyMce-wrapper"
-                                                                                style="font-size:12px;font-family:Nunito,Arial,Helvetica Neue,Helvetica,sans-serif;mso-line-height-alt:18px;color:#393d47;line-height:1.5">
-                                                                                <p style="margin:0;font-size:16px"><span
-                                                                                        style="font-size:16px;">Hola ' . $nameUser . ':</span></p>
-                                                                                <p
-                                                                                    style="margin:0;font-size:16px;mso-line-height-alt:18px">
-                                                                                     </p>
-                                                                                <p style="margin:0;font-size:16px">
-                                                                                    Le informamos que su solicitud de mérito academico ha sido '. $estado . '.
-                                                                                    
-                                                                                </p>
+                                                            
+                                                            <!-- TÍTULO -->
+                                                            <h1 style="margin:20px 0 20px 0;color:#041d3c;font-family:Nunito,Arial,sans-serif;font-size:24px;font-weight:bold;text-align:center;line-height:120%;padding-top:15px">
+                                                                Confirmación de Carga de Méritos Académicos
+                                                            </h1>
 
-                                                                                <p style="margin:0;font-size:16px">
-                                                                                    Cualquier inconveniente no dudes en contactarnos.
-                                                                                </p>
-                                                                            </div>
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
+                                                            <!-- SALUDO -->
+                                                            <p style="margin:0 0 20px 0;color:#333;font-family:Nunito,Arial,sans-serif;font-size:15px;line-height:160%">
+                                                                Estimado(a) <strong>' . htmlspecialchars($nombreUsuario) . '</strong>,
+                                                            </p>
+
+                                                            <!-- MENSAJE PRINCIPAL -->
+                                                            <p style="margin:0 0 20px 0;color:#555;font-family:Nunito,Arial,sans-serif;font-size:14px;line-height:160%">
+                                                                Le confirmamos que ha <strong>generado exitosamente</strong> su constancia de carga de méritos académicos en el sistema CEDA (Comisión de Evaluación Docente de Arquitectura).
+                                                            </p>
+
+                                                            <p style="margin:0 0 20px 0;color:#555;font-family:Nunito,Arial,sans-serif;font-size:14px;line-height:160%">
+                                                                A continuación se muestra un resumen de los méritos cargados en el sistema:
+                                                            </p>
+
+                                                            <!-- TABLA DE RESUMEN -->
+                                                            <table style="width:100%;border-collapse:collapse;margin:0 0 25px 0;background:#fff;border:1px solid #ddd;border-radius:5px;overflow:hidden">
+                                                                <thead>
+                                                                    <tr style="background-color:#041d3c;color:white">
+                                                                        <th style="padding:12px;border:1px solid #ddd;text-align:left;font-weight:bold;font-family:Nunito,Arial,sans-serif;font-size:14px">
+                                                                            Tipo de Mérito
+                                                                        </th>
+                                                                        <th style="padding:12px;border:1px solid #ddd;text-align:center;font-weight:bold;font-family:Nunito,Arial,sans-serif;font-size:14px">
+                                                                            Cantidad Cargada
+                                                                        </th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    ' . $filasMeritos . '
+                                                                    <tr style="background-color:#f5f5f5;font-weight:bold">
+                                                                        <td style="padding:12px;border:1px solid #ddd;text-align:left;font-family:Nunito,Arial,sans-serif">
+                                                                            Total de Méritos
+                                                                        </td>
+                                                                        <td style="padding:12px;border:1px solid #ddd;text-align:center;color:#041d3c;font-size:16px;font-family:Nunito,Arial,sans-serif">
+                                                                            ' . $totalMeritos . '
+                                                                        </td>
+                                                                    </tr>
+                                                                </tbody>
                                                             </table>
-                                      
-                                                            <table border="0" cellpadding="0" cellspacing="0"
-                                                                class="text_block block-5" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0;word-break:break-word"
-                                                                width="100%">
-                                                                <tr>
-                                                                    <td class="pad"
-                                                                        style="padding-bottom:20px;padding-left:20px;padding-right:20px;padding-top:10px">
-                                                                        <div style="font-family:sans-serif">
-                                                                            <div class="txtTinyMce-wrapper"
-                                                                                style="font-size:12px;font-family:Nunito,Arial,Helvetica Neue,Helvetica,sans-serif;mso-line-height-alt:14.399999999999999px;color:#393d47;line-height:1.2">
-                                                                                <p style="margin:0;font-size:16px"><span
-                                                                                        style="font-size:14px;">* Nota: este correo electrónico se envió desde una dirección de correo electrónico que no acepta correo entrante. No responda a este mensaje. </span></p>
-                                                                            </div>
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
-                                                            </table>
+
+                                                            <!-- LAYOUT -->
+                                                            <div class="two-columns" style="margin: 20px 0;">
+                                                                <!-- COLUMNA IZQUIERDA -->
+                                                                <div class="column">
+                                                                    <!-- MENSAJE IMPORTANTE SOBRE EVALUACIÓN -->
+                                                                    <div style="background-color:#e3f2fd;border-left:4px solid #2196F3;padding:15px;margin:0 0 15px 0;border-radius:4px">
+                                                                        <p style="margin:0;color:#0d47a1;font-family:Nunito,Arial,sans-serif;font-size:13px;line-height:160%;font-weight:bold">
+                                                                            ⚠️ Información Importante: Los méritos académicos cargados en el sistema están sujetos aún a evaluación por parte del comité correspondiente.
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <!-- PRÓXIMOS PASOS -->
+                                                                    <div style="background-color:#e7f3ff;border-left:4px solid #2196F3;padding:15px;margin:0;border-radius:4px">
+                                                                        <p style="margin:0 0 10px 0;color:#0c5ba7;font-family:Nunito,Arial,sans-serif;font-size:13px;font-weight:bold">
+                                                                            📋 Próximos Pasos:
+                                                                        </p>
+                                                                        <ul style="margin:0;padding-left:15px;color:#0c5ba7;font-family:Nunito,Arial,sans-serif;font-size:12px;line-height:160%">
+                                                                            <li>Permanezca atento a las notificaciones en su plataforma</li>
+                                                                            <li>Sus méritos serán evaluados por el comité académico</li>
+                                                                            <li>Podrá visualizar el estado de cada mérito en tiempo real</li>
+                                                                            <li>Los puntajes finales estarán disponibles una vez completada la evaluación</li>
+                                                                        </ul>
+                                                                    </div>
+                                                                </div>
+
+                                                                <!-- COLUMNA DERECHA -->
+                                                                <div class="column">
+                                                                    ' . $mensajeCategoriasFaltantes . '
+
+                                                                    <!-- RECORDATORIO -->
+                                                                    <div style="background-color:#f8f9fa;border-left:4px solid #6c757d;padding:15px;margin:0;border-radius:4px">
+                                                                        <p style="margin:0;color:#495057;font-family:Nunito,Arial,sans-serif;font-size:12px;line-height:160%">
+                                                                            <strong>💡 Recordatorio:</strong> Esta confirmación certifica que ha cargado sus méritos en el sistema durante el período activo. Los puntajes finales serán asignados posterior a la evaluación del comité académico.
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <!-- CIERRE -->
+                                                            <p style="margin:30px 0 0 0;color:#666;font-family:Nunito,Arial,sans-serif;font-size:13px;line-height:160%;text-align:center">
+                                                                Cualquier duda o inconveniente, no dude en contactar al equipo de soporte.<br>
+                                                                <strong>Gracias por participar en el sistema CEDA</strong>
+                                                            </p>
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -368,76 +388,25 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                                     </tr>
                                 </tbody>
                             </table>
+
+                            <!-- FOOTER -->
                             <table align="center" border="0" cellpadding="0" cellspacing="0" class="row row-3"
-                                role="presentation" style="mso-table-lspace:0;mso-table-rspace:0;background:transparent linear-gradient(180deg, #003470 0%, #041d3c 100%) 0% 0% no-repeat padding-box"
+                                role="presentation" 
+                                style="mso-table-lspace:0;mso-table-rspace:0;background:linear-gradient(180deg, #003470 0%, #041d3c 100%)"
                                 width="100%">
                                 <tbody>
                                     <tr>
                                         <td>
                                             <table align="center" border="0" cellpadding="0" cellspacing="0"
                                                 class="row-content stack" role="presentation"
-                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:500px"
-                                                width="500">
+                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:600px;padding:20px"
+                                                width="600">
                                                 <tbody>
                                                     <tr>
-                                                        <td class="column column-1"
-                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:5px;padding-bottom:5px;border-top:0;border-right:0;border-bottom:0;border-left:0"
-                                                            width="100%">
-                                                            <table border="0" cellpadding="15" cellspacing="0"
-                                                                class="text_block block-1" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0;word-break:break-word"
-                                                                width="100%">
-                                                                <tr>
-                                                                    <td class="pad">
-                                                                        <div style="font-family:sans-serif">
-                                                                            <div class="txtTinyMce-wrapper"
-                                                                                style="font-size:12px;font-family:Nunito,Arial,Helvetica Neue,Helvetica,sans-serif;text-align:center;mso-line-height-alt:18px;color:#fff;line-height:1.5">
-                                                                                <span style="font-size:16px;"> </span></div>
-                                                                        </div>
-                                                                    </td>
-                                                                </tr>
-                                                            </table>
-                                                        </td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <table align="center" border="0" cellpadding="0" cellspacing="0" class="row row-4"
-                                role="presentation" style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
-                                <tbody>
-                                    <tr>
-                                        <td>
-                                            <table align="center" border="0" cellpadding="0" cellspacing="0"
-                                                class="row-content stack" role="presentation"
-                                                style="mso-table-lspace:0;mso-table-rspace:0;color:#000;width:500px"
-                                                width="500">
-                                                <tbody>
-                                                    <tr>
-                                                        <td class="column column-1"
-                                                            style="mso-table-lspace:0;mso-table-rspace:0;font-weight:400;text-align:left;vertical-align:top;padding-top:5px;padding-bottom:5px;border-top:0;border-right:0;border-bottom:0;border-left:0"
-                                                            width="100%">
-                                                            <table border="0" cellpadding="0" cellspacing="0"
-                                                                class="icons_block block-1" role="presentation"
-                                                                style="mso-table-lspace:0;mso-table-rspace:0" width="100%">
-                                                                <tr>
-                                                                    <td class="pad"
-                                                                        style="vertical-align:middle;color:#9d9d9d;font-family:inherit;font-size:15px;padding-bottom:5px;padding-top:5px;text-align:center">
-                                                                        <table cellpadding="0" cellspacing="0"
-                                                                            role="presentation"
-                                                                            style="mso-table-lspace:0;mso-table-rspace:0"
-                                                                            width="100%">
-                                                                            <tr>
-                                                                                <td class="alignment"
-                                                                                    style="vertical-align:middle;text-align:center">
-                                                                                </td>
-                                                                            </tr>
-                                                                        </table>
-                                                                    </td>
-                                                                </tr>
-                                                            </table>
+                                                        <td style="text-align:center">
+                                                            <p style="margin:0;color:#fff;font-family:Nunito,Arial,sans-serif;font-size:11px">
+                                                                Este correo fue generado automáticamente. Por favor no responda a este mensaje.
+                                                            </p>
                                                         </td>
                                                     </tr>
                                                 </tbody>
@@ -449,12 +418,96 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                         </td>
                     </tr>
                 </tbody>
-            </table><!-- End -->
+            </table>
         </body>
+        </html>';
 
-        </html>');
-    
-        $mailManager->sendGeneralMessage($email, "CEDA - Notificación estado solicitud", $htmlMail);
+        $mailManager->sendGeneralMessage($email, "CEDA - Confirmación de Carga de Méritos Académicos", $htmlMail);
+    }
+
+    /**
+     * Validar si el usuario ha cargado al menos 1 mérito en cada categoría
+     */
+    private function validarMeritosPorCategoria($id_usuario) {
+        $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
+        $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
+        $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
+        $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
+        $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
+
+        // Obtener méritos del período actual para este usuario
+        $premios = $premiosTable->getPremiosByUserPeriodoActual($id_usuario);
+        $cargos = $cargosTable->getCargosByUserPeriodoActual($id_usuario);
+        $capacitacion = $capacitacionTable->getCapacitacionProfesionalByUserPeriodoActual($id_usuario);
+        $formacion = $formacionTable->getFormacionAcademicaByUserPeriodoActual($id_usuario);
+        $investigaciones = $investigacionesTable->getInvestigacionesByUserPeriodoActual($id_usuario);
+
+        // Validar que haya al menos 1 en cada categoría
+        $validaciones = [
+            'premios' => count($premios) > 0,
+            'cargos' => count($cargos) > 0,
+            'capacitacion' => count($capacitacion) > 0,
+            'formacion' => count($formacion) > 0,
+            'investigaciones' => count($investigaciones) > 0
+        ];
+
+        // Retornar datos de validación y conteos
+        return [
+            'completo' => array_reduce($validaciones, function($carry, $item) {
+                return $carry && $item;
+            }, true),
+            'validaciones' => $validaciones,
+            'conteos' => [
+                'premios' => count($premios),
+                'cargos' => count($cargos),
+                'capacitacion' => count($capacitacion),
+                'formacion' => count($formacion),
+                'investigaciones' => count($investigaciones)
+            ]
+        ];
+    }
+
+    /**
+     * Generar constancia de méritos (Acción directa - GET/POST)
+     */
+    public function generarConstanciaAction() {
+        $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
+        $userTable = new \ORM\Model\Entity\UsuarioTable($this->adapter);
+        
+        // Validar méritos
+        $validacion = $this->validarMeritosPorCategoria($id_usuario);
+
+        // Obtener datos del usuario
+        $usuario = $userTable->getUserById($id_usuario);
+        
+        if (empty($usuario)) {
+            $this->flashMessenger()->addErrorMessage('Usuario no encontrado.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "misSolicitudes"]);
+        }
+
+        try {
+            // Enviar correo con constancia
+            $this->enviarConstanciaAcademicos(
+                $usuario[0]['email'],
+                $usuario[0]['nombre'],
+                $validacion['conteos'],
+                $validacion['validaciones']
+            );
+
+            // Registrar en log
+            $this->saveLog($id_usuario, 'Se generó y envió constancia de méritos académicos al correo: ' . $usuario[0]['email']);
+
+            $this->flashMessenger()->addSuccessMessage(
+                'Constancia enviada exitosamente a ' . $usuario[0]['email'] . '. ' .
+                'Revise su bandeja de entrada y carpeta de spam.'
+            );
+
+        } catch (\Exception $e) {
+            $this->saveLog($id_usuario, 'Error al generar constancia: ' . $e->getMessage());
+            $this->flashMessenger()->addErrorMessage('Error al generar la constancia: ' . $e->getMessage());
+        }
+
+        return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "misSolicitudes"]);
     }
 
     public function saveLog($id_usuario, $accion){
@@ -471,23 +524,19 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
             return $this->redirect()->toRoute('home');
         }
+
         //cambiar al layout administrativo...
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
-
         
+        // Obtenemos el periodo activo para validaciones
+        $periodoActivo = $this->obtenerPeriodoActivo();
+   
         $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
         $fileManager = new \Utilidades\Service\FileManager();
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
-
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
         
-        
-        
-
         if ($this->getRequest()->isPost()) {
 
             $params = $this->params()->fromPost();
@@ -534,25 +583,30 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
     
                 $result = $premiosTable->insert($params);
         
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: premios');
                     $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                     
                 } else {
                     $this->saveLog($id_usuario, 'Error al realizar la solicitud');
                     $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.'); 
-                    
                 }
-                
             }
         }
 
 
         if($idSolicitud == 0){
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "periodoActivo" => $periodoActivo
+            ]);
         }else{
             $solicitud = $premiosTable->getPremiosById($id_usuario, $idSolicitud);
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "dataedit" => $solicitud, 
+                "periodoActivo" => $periodoActivo
+            ]);
         }
         
     }
@@ -566,14 +620,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
+        // Obtenemos el periodo activo para validaciones
+        $periodoActivo = $this->obtenerPeriodoActivo();
+
         $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
         $fileManager = new \Utilidades\Service\FileManager();
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
-
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
 
         if ($this->getRequest()->isPost()) {
 
@@ -599,10 +652,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 }else if($params['categoria'] == 'pensum'){
                     $params['anio_cierre_pensum'] = $params['fecha_obtencion'];
                 }
-    
-                /*$key = "url_constancia";
-                $params[$key] = $encripted_name;*/
-    
+        
                 $puntos = floatval($params["puntos"]);
                 $params["puntos"] = $puntos;
     
@@ -642,7 +692,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 unset($params['fecha_obtencion']);
     
                 $result = $formacionTable->insert($params);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria de formación académica');
                     $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                 } else {
@@ -655,10 +705,17 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         }
 
         if($idSolicitud == 0){
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "periodoActivo" => $periodoActivo
+            ]);
         }else{
             $solicitud = $formacionTable->getFormacionAcademicaById($id_usuario, $idSolicitud);
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "dataedit" => $solicitud, 
+                "periodoActivo" => $periodoActivo
+            ]);
         }
     }
 
@@ -670,14 +727,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
+        // Obtenemos el periodo activo para validaciones
+        $periodoActivo = $this->obtenerPeriodoActivo();
+
         $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
         $fileManager = new \Utilidades\Service\FileManager();
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
-
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
 
         if ($this->getRequest()->isPost()) {
 
@@ -728,7 +784,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                     $params[$key] = $encripted_name;
         
                     $result = $cargosTable->insert($params);
-                    if ($result > 0) {
+                    if ($result->getAffectedRows() > 0) {
                         $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: cargos desempeñados');
                         $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                     } else {
@@ -745,13 +801,18 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         }
 
         if($idSolicitud == 0){
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "periodoActivo" => $periodoActivo
+            ]);
         }else{
-            $solicitud = $cargosTable->getCargoById($id_usuario, $idSolicitud);
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+            $solicitud = $cargosTable->getCargosById($id_usuario, $idSolicitud);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "dataedit" => $solicitud, 
+                "periodoActivo" => $periodoActivo
+            ]);
         }
-
-        //return new ViewModel(["data" => $this->authService->getIdentity()->getData()]);
     }
 
     public function investigacionesAction(){
@@ -762,15 +823,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
+        // Obtenemos el periodo activo para validaciones
+        $periodoActivo = $this->obtenerPeriodoActivo();
+
         $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
         $fileManager = new \Utilidades\Service\FileManager();
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
-
-
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
 
         if ($this->getRequest()->isPost()) {
 
@@ -813,7 +872,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $params[$key] = $encripted_name;
     
                 $result = $investigacionesTable->insert($params);
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: Investigaciones/publicaciones');
                     $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                 } else {
@@ -824,12 +883,18 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
         }
 
-       
         if($idSolicitud == 0){
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "periodoActivo" => $periodoActivo
+            ]);
         }else{
             $solicitud = $investigacionesTable->getInvestigacionesById($id_usuario, $idSolicitud);
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "dataedit" => $solicitud, 
+                "periodoActivo" => $periodoActivo
+            ]);
         }
     }
 
@@ -841,14 +906,13 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
+        // Obtenemos el periodo activo para validaciones
+        $periodoActivo = $this->obtenerPeriodoActivo();
+
         $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
         $fileManager = new \Utilidades\Service\FileManager();
         $id_usuario = $this->authService->getIdentity()->getData()["usuario"];
         $idSolicitud = $this->params()->fromRoute('val2',0);
-
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-        $settings = $configuracionTable->getConfiguracion();
-        $fecha = $settings[0]['endDate'] . " ". $settings[0]['endTime'] . ":59";
 
         if ($this->getRequest()->isPost()) {
 
@@ -892,7 +956,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
     
                 $result = $capacitacionTable->insert($params);
                 
-                if ($result > 0) {
+                if ($result->getAffectedRows() > 0) {
                     $this->saveLog($id_usuario, 'Se creo una nueva solicitud de la categoria: capacitación profesional');
                     $this->flashMessenger()->addSuccessMessage('Solicitud creada con exito');
                 } else {
@@ -904,11 +968,17 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         }
 
         if($idSolicitud == 0){
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "fecha" => $fecha]);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "periodoActivo" => $periodoActivo
+            ]);
         }else{
-            $solicitud = $capacitacionTable->getCapacitacionById($id_usuario, $idSolicitud);
-            //var_dump($solicitud);
-            return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataedit" => $solicitud, "fecha" => $fecha]);
+            $solicitud = $capacitacionTable->getCapacitacionProfesionalById($id_usuario, $idSolicitud);
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(), 
+                "dataedit" => $solicitud, 
+                "periodoActivo" => $periodoActivo
+            ]);
         }
     }
 
@@ -917,28 +987,201 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
             return $this->redirect()->toRoute('home');
         }
+
         //cambiar al layout administrativo...
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
-        //Obtenemos la lista de solicitudes 
-        $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
-        $premios = $premiosTable->getPremios();
-
-        $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
-        $cargos = $cargosTable->getCargos();
-
-        $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
-        $capacitacionList = $capacitacionTable->getCapacitacionProfesional();
+        $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
+        $ultimoPeriodo = $periodosTable->getUltimoPeriodo();
         
-        $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
-        $formacionList = $formacionTable->getFormacionAcademica();
+        // Obtener filtro de categoría de la URL
+        $categoriaFiltro = $this->params()->fromRoute('val1', 'todas'); 
+
+        // Inicializar arrays vacíos
+        $premios = [];
+        $cargos = [];
+        $capacitacionList = [];
+        $formacionList = [];
+        $investigaciones = [];
+        $periodoActivo = null;
+
+        // Solo obtener datos si hay último período Y está activo o inactivo (NO cerrado)
+        if ($ultimoPeriodo && in_array($ultimoPeriodo['estado'], ['activo', 'inactivo'])) {
+            $periodo_id = $ultimoPeriodo['id_periodo'];
+            $periodoActivo = [$ultimoPeriodo];
+
+            // Obtener datos del ÚLTIMO PERÍODO según el filtro de categoría
+            if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'premios') {
+                $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
+                $premios = $premiosTable->getByPeriodo($periodo_id);
+            }
+
+            if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'cargos') {
+                $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
+                $cargos = $cargosTable->getByPeriodo($periodo_id);
+            }
+
+            if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'capacitacion') {
+                $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
+                $capacitacionList = $capacitacionTable->getByPeriodo($periodo_id);
+            }
+
+            if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'formacion') {
+                $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
+                $formacionList = $formacionTable->getByPeriodo($periodo_id); 
+            }
+
+            if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'investigaciones') {
+                $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
+                $investigaciones = $investigacionesTable->getByPeriodo($periodo_id);
+            }
+        }
         
-        $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
-        $investigaciones = $investigacionesTable->getInvestigaciones();
+        // Inicializar el servicio de validación de puntajes
+        $puntajeValidator = new \Meritos\Services\PuntajeValidatorService($this->adapter);
+        $puntajeValidator->setPeriodoActual($ultimoPeriodo['id_periodo']);
+        
+        // Procesar todas las solicitudes para agregar información de límites
+        $todasLasSolicitudes = [];
+        
+        // Procesar PREMIOS
+        foreach ($premios as &$premio) {
+            $categoria = 'premios';
+            $premio['categoria'] = $categoria;
+            $premio['tabla'] = 'premios';
+            $premio['id_merito'] = $premio['id_premio']; // Normalizar ID
+            
+            // Verificar límites del usuario
+            $premio['categoria_limite_alcanzado'] = $puntajeValidator->categoriaLimiteAlcanzado($premio['id_usuario'], $categoria);
+            $premio['limite_total_alcanzado'] = $puntajeValidator->limiteTotalAlcanzado($premio['id_usuario']);
+            $premio['puntaje_categoria_actual'] = $puntajeValidator->obtenerPuntajeActual($premio['id_usuario'], $categoria);
+            $premio['puntaje_total_actual'] = $puntajeValidator->obtenerPuntajeTotal($premio['id_usuario']);
+            
+            // Determinar información adicional para tooltip y estado visual
+            $premio = $this->agregarInformacionEstado($premio, $puntajeValidator, $categoria);
+            
+            $todasLasSolicitudes[] = $premio;
+        }
+        
+        // Procesar CARGOS
+        foreach ($cargos as &$cargo) {
+            $categoria = 'cargos';
+            $cargo['categoria'] = $categoria;
+            $cargo['tabla'] = 'cargos';
+            $cargo['id_merito'] = $cargo['id_cargo']; // Normalizar ID
+            
+            $cargo['categoria_limite_alcanzado'] = $puntajeValidator->categoriaLimiteAlcanzado($cargo['id_usuario'], $categoria);
+            $cargo['limite_total_alcanzado'] = $puntajeValidator->limiteTotalAlcanzado($cargo['id_usuario']);
+            $cargo['puntaje_categoria_actual'] = $puntajeValidator->obtenerPuntajeActual($cargo['id_usuario'], $categoria);
+            $cargo['puntaje_total_actual'] = $puntajeValidator->obtenerPuntajeTotal($cargo['id_usuario']);
+            
+            $cargo = $this->agregarInformacionEstado($cargo, $puntajeValidator, $categoria);
+            
+            $todasLasSolicitudes[] = $cargo;
+        }
+        
+        // Procesar CAPACITACIÓN PROFESIONAL
+        foreach ($capacitacionList as &$capacitacion) {
+            $categoria = 'capacitacion_profesional';
+            $capacitacion['categoria'] = $categoria;
+            $capacitacion['tabla'] = 'capacitacion_profesional';
+            $capacitacion['id_merito'] = $capacitacion['id_capacitacion']; // Normalizar ID
+            
+            $capacitacion['categoria_limite_alcanzado'] = $puntajeValidator->categoriaLimiteAlcanzado($capacitacion['id_usuario'], $categoria);
+            $capacitacion['limite_total_alcanzado'] = $puntajeValidator->limiteTotalAlcanzado($capacitacion['id_usuario']);
+            $capacitacion['puntaje_categoria_actual'] = $puntajeValidator->obtenerPuntajeActual($capacitacion['id_usuario'], $categoria);
+            $capacitacion['puntaje_total_actual'] = $puntajeValidator->obtenerPuntajeTotal($capacitacion['id_usuario']);
+            
+            $capacitacion = $this->agregarInformacionEstado($capacitacion, $puntajeValidator, $categoria);
+            
+            $todasLasSolicitudes[] = $capacitacion;
+        }
+        
+        // Procesar FORMACIÓN ACADÉMICA
+        foreach ($formacionList as &$formacion) {
+            $categoria = 'formacion_academica';
+            $formacion['categoria'] = $categoria;
+            $formacion['tabla'] = 'formacion_academica';
+            $formacion['id_merito'] = $formacion['id_formacion_academica']; // Normalizar ID
+            
+            $formacion['categoria_limite_alcanzado'] = $puntajeValidator->categoriaLimiteAlcanzado($formacion['id_usuario'], $categoria);
+            $formacion['limite_total_alcanzado'] = $puntajeValidator->limiteTotalAlcanzado($formacion['id_usuario']);
+            $formacion['puntaje_categoria_actual'] = $puntajeValidator->obtenerPuntajeActual($formacion['id_usuario'], $categoria);
+            $formacion['puntaje_total_actual'] = $puntajeValidator->obtenerPuntajeTotal($formacion['id_usuario']);
+            
+            $formacion = $this->agregarInformacionEstado($formacion, $puntajeValidator, $categoria);
+            
+            $todasLasSolicitudes[] = $formacion;
+        }
+        
+        // Procesar INVESTIGACIONES
+        foreach ($investigaciones as &$investigacion) {
+            $categoria = 'investigaciones';
+            $investigacion['categoria'] = $categoria;
+            $investigacion['tabla'] = 'investigaciones';
+            $investigacion['id_merito'] = $investigacion['id_investigacion']; // Normalizar ID
+            
+            $investigacion['categoria_limite_alcanzado'] = $puntajeValidator->categoriaLimiteAlcanzado($investigacion['id_usuario'], $categoria);
+            $investigacion['limite_total_alcanzado'] = $puntajeValidator->limiteTotalAlcanzado($investigacion['id_usuario']);
+            $investigacion['puntaje_categoria_actual'] = $puntajeValidator->obtenerPuntajeActual($investigacion['id_usuario'], $categoria);
+            $investigacion['puntaje_total_actual'] = $puntajeValidator->obtenerPuntajeTotal($investigacion['id_usuario']);
+            
+            $investigacion = $this->agregarInformacionEstado($investigacion, $puntajeValidator, $categoria);
+            
+            $todasLasSolicitudes[] = $investigacion;
+        }
 
+        return new ViewModel([
+            "data" => $this->authService->getIdentity()->getData(), 
+            "premios" => $premios, 
+            "cargos" => $cargos, 
+            "capacitacion" => $capacitacionList, 
+            "formacion" => $formacionList, 
+            "investigaciones" => $investigaciones,
+            "categoriaActual" => $categoriaFiltro,
+            "periodoActivo" => $periodoActivo ? $periodoActivo[0] : null,
+            "puntajeValidator" => $puntajeValidator,
+            "todasLasSolicitudes" => $todasLasSolicitudes
+        ]);
+    }
 
-        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "premios"=> $premios, "cargos"=>$cargos, "capacitacion"=>$capacitacionList, "formacion"=> $formacionList, "investigaciones"=>$investigaciones]);
+    /**
+     * Método auxiliar para agregar información de estado y tooltips
+     */
+    private function agregarInformacionEstado($solicitud, $puntajeValidator, $categoria) {
+        // Determinar color del badge y tooltip según el estado
+        switch($solicitud['nombre_estado']) {
+            case 'Ingresada - Límite Alcanzado':
+                $solicitud['color'] = 'secondary';
+                $solicitud['tooltip'] = "Este docente ya alcanzó el límite de {$puntajeValidator::LIMITES[$categoria]} puntos en esta categoría";
+                break;
+            case 'Ingresada - Sin Efecto':
+                $solicitud['color'] = 'dark';
+                $solicitud['tooltip'] = 'Este docente ya alcanzó el límite total de 30 puntos';
+                break;
+            case 'Ingresada':
+                $solicitud['color'] = 'info';
+                $solicitud['tooltip'] = 'Solicitud pendiente de calificación';
+                break;
+            case 'Aceptada':
+                $solicitud['color'] = 'success';
+                $solicitud['tooltip'] = 'Solicitud aceptada y puntos otorgados';
+                break;
+            case 'Rechazada':
+                $solicitud['color'] = 'danger';
+                $solicitud['tooltip'] = 'Solicitud rechazada';
+                break;
+            default:
+                $solicitud['color'] = $solicitud['color'] ?? 'secondary';
+                $solicitud['tooltip'] = '';
+        }
+        
+        // Agregar información adicional para mostrar en la vista
+        $solicitud['limite_categoria'] = $puntajeValidator::LIMITES[$categoria];
+        $solicitud['limite_total'] = $puntajeValidator::LIMITE_TOTAL;
+        
+        return $solicitud;
     }
 
 
@@ -950,37 +1193,82 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
+        $usuario = $this->authService->getIdentity()->getData()["usuario"];
 
-        //Obtenemos todos los méritos académicos por usuario
+        $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
+        
+        // CAMBIO PRINCIPAL: Obtener último período en lugar del período activo
+        $ultimoPeriodo = $periodosTable->getUltimoPeriodo();
+        $periodoActivo = $periodosTable->getPeriodoActivo();
+        
+        // Determinar si puede subir méritos (solo si hay período activo)
+        $puedeSubir = !empty($periodoActivo);
+        
+        // Si no hay último período, mostrar mensaje informativo
+        if (!$ultimoPeriodo) {
+            $this->flashMessenger()->addWarningMessage('No hay períodos configurados en el sistema.');
+            return new ViewModel([
+                "data" => $this->authService->getIdentity()->getData(),  
+                "premios" => [], 
+                "cargos" => [], 
+                "formacionAcademica" => [], 
+                "capacitacionProfesional" => [], 
+                "investigaciones" => [], 
+                "miPuntaje" => 0, 
+                "puntos" => [],
+                "periodoActual" => null,
+                "periodoActivo" => null,
+                "puedeSubir" => false
+            ]);
+        }
+
+        // Usar el último período para obtener las solicitudes
+        $periodo_id = $ultimoPeriodo['id_periodo'];
+
+        //Obtenemos todos los méritos académicos por usuario del ÚLTIMO PERÍODO
         $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
-        $misPremios = $premiosTable->getPremiosByUser($this->authService->getIdentity()->getData()["usuario"]);
+        $misPremios = $premiosTable->getPremiosByUserPeriodo($usuario, $periodo_id);
 
         $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
-        $misCargos = $cargosTable->getCargosByUser($this->authService->getIdentity()->getData()["usuario"]);
+        $misCargos = $cargosTable->getCargosByUserPeriodo($usuario, $periodo_id);
 
         $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
-        $misCapacitaciones = $capacitacionTable->getCapacitacionProfesionalByUser($this->authService->getIdentity()->getData()["usuario"]);
+        $misCapacitaciones = $capacitacionTable->getCapacitacionProfesionalByUserPeriodo($usuario, $periodo_id);
         
         $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
-        $miformacionacademica = $formacionTable->getFormacionAcademicaByUser($this->authService->getIdentity()->getData()["usuario"]);
+        $miformacionacademica = $formacionTable->getFormacionAcademicaByUserPeriodo($usuario, $periodo_id);
         
         $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
-        $misInvestigaciones = $investigacionesTable->getInvestigacionesByUser($this->authService->getIdentity()->getData()["usuario"]);
+        $misInvestigaciones = $investigacionesTable->getInvestigacionesByUserPeriodo($usuario, $periodo_id);
         
         $puntosTable = new \ORM\Model\Entity\PuntosTable($this->adapter);
-        $misPuntos = $puntosTable->getPuntosByUser($this->authService->getIdentity()->getData()["usuario"]);
+        $misPuntos = $puntosTable->getPuntosByUserPeriodo($usuario, $periodo_id);
         
         $puntajeActual = $misPuntos ? floatval($misPuntos[0]["capacitacion_profesional"]) + floatval($misPuntos[0]["formacion_academica"]) + floatval($misPuntos[0]["premios"]) + floatval($misPuntos[0]["investigaciones"]) + floatval($misPuntos[0]["cargos"]) : 0;
         
         if(!$misPuntos){
-            $misPuntos = array( ["premios" => "0",
-                "investigaciones" => "0",
-                "cargos" => "0",
-                "capacitacion_profesional" => "0",
-                "formacion_academica" => "0" ]);
+            $misPuntos = array( 
+                ["premios" => "0",
+                "capacitacion_profesional" => "0", 
+                "formacion_academica" => "0", 
+                "investigaciones" => "0", 
+                "cargos" => "0"]
+            );
         }
 
-        return new ViewModel(["data" => $this->authService->getIdentity()->getData(),  "premios"=> $misPremios, "cargos"=> $misCargos, "formacionAcademica" => $miformacionacademica, "capacitacionProfesional"=> $misCapacitaciones, "investigaciones"=>  $misInvestigaciones, "miPuntaje" =>$puntajeActual, "puntos" => $misPuntos]);
+        return new ViewModel([
+            "data" => $this->authService->getIdentity()->getData(),  
+            "premios" => $misPremios, 
+            "cargos" => $misCargos, 
+            "formacionAcademica" => $miformacionacademica, 
+            "capacitacionProfesional" => $misCapacitaciones, 
+            "investigaciones" => $misInvestigaciones, 
+            "miPuntaje" => $puntajeActual, 
+            "puntos" => $misPuntos,
+            "periodoActual" => $ultimoPeriodo,
+            "periodoActivo" => !empty($periodoActivo) ? $periodoActivo[0] : null,
+            "puedeSubir" => $puedeSubir
+        ]);
     }
 
 
@@ -1000,7 +1288,50 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $cargosTable->getSolicitud($id_solicitud);
 
-        //var_dump($solicitud);
+        // OBTENER EL PERÍODO DE LA SOLICITUD
+        $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        if (!$periodo_id) {
+            $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+        }
+
+        if ($this->params()->fromPost("action") == "editarEstado") {
+            $nuevoEstado = $this->params()->fromPost("nuevo_estado");
+            $motivoCambio = $this->params()->fromPost("motivo_cambio");
+            $id_usuario = $this->params()->fromPost("id_usuario");
+            $puntosActuales = floatval($this->params()->fromPost("puntos_actuales"));
+            
+            $estadoAnterior = $solicitud[0]["id_estado"];
+            $user = $userTable->getUserById($id_usuario);
+            
+            // Actualizar estado de la solicitud
+            $params = array(
+                "id_estado" => $nuevoEstado,
+                "mensaje" => $motivoCambio
+            );
+            
+            $result = $cargosTable->update($params, ["id_cargo" => $id_solicitud]);
+            
+            if ($result > 0) {
+                // Manejar puntos según el cambio de estado INCLUYENDO PERÍODO
+                $this->manejarCambioPuntosCargos($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id);
+                
+                // Registrar en log
+                $estadoTexto = $this->getEstadoTexto($nuevoEstado);
+                $estadoAnteriorTexto = $this->getEstadoTexto($estadoAnterior);
+                
+                $logMessage = "Se cambió el estado de la solicitud de cargos desempeñados ID: {$id_solicitud} " .
+                            "de '{$estadoAnteriorTexto}' a '{$estadoTexto}'. " .
+                            "Usuario afectado: {$user[0]['nombre']}. Motivo: {$motivoCambio}";
+                
+                $this->saveLog($id_admin, $logMessage);
+                $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
+                
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
+            }
+        }
 
         if ($this->params()->fromPost("action") == "rechazar") {
             $params = $this->params()->fromPost();
@@ -1014,14 +1345,12 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $cargosTable->update($params, ["id_cargo" => $id_solicitud]);
                 
             if ($result > 0) {
-                //$this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de cargos desempeñados con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-           
         }
 
         if ($this->params()->fromPost("action") == "aceptar") {
@@ -1030,44 +1359,52 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
             $resultado = $cargosTable->update($params, ["id_cargo" => $id_solicitud]);
             
-            
             if ($resultado > 0) {
                 $id_usuario = $this->params()->fromPost("id_usuario");
-                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+                
+                // OBTENER PUNTOS POR PERÍODO
+                $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
                 $puntosActuales = $misPuntos ? $misPuntos[0]["cargos"] : 0;
                 $year = date("Y");
                 $auxPts = $this->params()->fromPost("puntos");
+                
                 if($misPuntos){
-                    //Ya hay puntos 
+                    //Ya hay puntos para este período
                     $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
                     if($nuevoPuntaje >= 4){
                         $nuevoPuntaje = 4;
                     }
-                    $params = array( "cargos" => $nuevoPuntaje,
-                    "year"=>$year);
-                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    $params = array( 
+                        "cargos" => $nuevoPuntaje,
+                        "year" => $year
+                    );
+                    $result = $puntosTable->update($params, ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]);
                     
                 }else{
-                    //No hay puntos
-                    $params = array( "cargos" => $auxPts,
-                                     "id_usuario" => $id_usuario,
-                                     "year"=>$year);
+                    //No hay puntos para este período
+                    $params = array( 
+                        "premios" => 0,
+                        "investigaciones" => 0,
+                        "formacion_academica" => 0,
+                        "cargos" => $auxPts,
+                        "capacitacion_profesional" => 0,
+                        "id_usuario" => $id_usuario,
+                        "id_periodo" => $periodo_id,
+                        "year" => $year
+                    );
                     $result = $puntosTable->insert($params);
                 }
 
                 $user = $userTable->getUserById($id_usuario);
-                //$this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
                 $this->saveLog($id_admin, 'Se acepto la solicitud de cargos desempeñados con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-
         }
 
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
-
     }
 
     public function admPremiosAction(){
@@ -1078,7 +1415,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
-
         $id_admin = $this->authService->getIdentity()->getData()["usuario"];
         $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
         $puntosTable = new \ORM\Model\Entity\PuntosTable($this->adapter);
@@ -1087,7 +1423,51 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $premiosTable->getSolicitud($id_solicitud);
 
-        //var_dump($solicitud);
+        // OBTENER EL PERÍODO DE LA SOLICITUD
+        $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        if (!$periodo_id) {
+            $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+        }
+
+        if ($this->params()->fromPost("action") == "editarEstado") {
+            $nuevoEstado = $this->params()->fromPost("nuevo_estado");
+            $motivoCambio = $this->params()->fromPost("motivo_cambio");
+            $id_usuario = $this->params()->fromPost("id_usuario");
+            $puntosActuales = floatval($this->params()->fromPost("puntos_actuales"));
+            
+            $estadoAnterior = $solicitud[0]["id_estado"];
+            $user = $userTable->getUserById($id_usuario);
+            
+            // Actualizar estado de la solicitud
+            $params = array(
+                "id_estado" => $nuevoEstado,
+                "mensaje" => $motivoCambio
+            );
+            
+            $result = $premiosTable->update($params, ["id_premio" => $id_solicitud]);
+            
+            if ($result > 0) {
+                // Manejar puntos según el cambio de estado INCLUYENDO PERÍODO
+                $this->manejarCambioPuntosPremios($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id);
+                
+                // Registrar en log
+                $estadoTexto = $this->getEstadoTexto($nuevoEstado);
+                $estadoAnteriorTexto = $this->getEstadoTexto($estadoAnterior);
+                
+                $logMessage = "Se cambió el estado de la solicitud de premios ID: {$id_solicitud} " .
+                            "de '{$estadoAnteriorTexto}' a '{$estadoTexto}'. " .
+                            "Usuario afectado: {$user[0]['nombre']}. Motivo: {$motivoCambio}";
+                
+                $this->saveLog($id_admin, $logMessage);
+                $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
+                
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
+            }
+        }
+
         if ($this->params()->fromPost("action") == "rechazar") {
             $params = $this->params()->fromPost();
             $params['id_estado'] = '3';
@@ -1100,14 +1480,12 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $premiosTable->update($params, ["id_premio" => $id_solicitud]);
                 
             if ($result > 0) {
-                // $this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de premios con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-           
         }
 
         if ($this->params()->fromPost("action") == "aceptar") {
@@ -1116,53 +1494,52 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
             $resultado = $premiosTable->update($params, ["id_premio" => $id_solicitud]);
             
-            
             if ($resultado > 0) {
                 $id_usuario = $this->params()->fromPost("id_usuario");
-                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+                
+                // OBTENER PUNTOS POR PERÍODO
+                $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
                 $puntosActuales = $misPuntos ? $misPuntos[0]["premios"] : 0;
                 $year = date("Y");
                 $auxPts = $this->params()->fromPost("puntos");
+                
                 if($misPuntos){
-                    //Ya hay puntos 
+                    //Ya hay puntos para este período
                     $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
                     if($nuevoPuntaje >= 2){
                         $nuevoPuntaje = 2;
-                    }else{
-                        $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);;
                     }
-                    /* //modificado a solicitud de CEDA 2025-02-19 17:00
-
-                    if($auxPts >= floatval($puntosActuales)){
-                        $nuevoPuntaje = $auxPts;
-                    }else{
-                        $nuevoPuntaje = $puntosActuales;
-                    }*/
-                    $params = array( "premios" => $nuevoPuntaje,
-                    "year"=>$year);
-                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    $params = array( 
+                        "premios" => $nuevoPuntaje,
+                        "year" => $year
+                    );
+                    $result = $puntosTable->update($params, ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]);
                     
                 }else{
-                    //No hay puntos
-                    $params = array( "premios" => $auxPts,
-                                     "id_usuario" => $id_usuario,
-                                     "year"=>$year);
+                    //No hay puntos para este período
+                    $params = array( 
+                        "premios" => $auxPts,
+                        "investigaciones" => 0,
+                        "formacion_academica" => 0,
+                        "cargos" => 0,
+                        "capacitacion_profesional" => 0,
+                        "id_usuario" => $id_usuario,
+                        "id_periodo" => $periodo_id,
+                        "year" => $year
+                    );
                     $result = $puntosTable->insert($params);
                 }
 
                 $user = $userTable->getUserById($id_usuario);
-               //$this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
                 $this->saveLog($id_admin, 'Se acepto la solicitud de premios con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-            
         }
 
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
-
     }
 
     public function admCapacitacionProfesionalAction(){
@@ -1180,7 +1557,51 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $capacitacionTable->getSolicitud($id_solicitud);
-        //var_dump($solicitud);
+
+        // OBTENER EL PERÍODO DE LA SOLICITUD
+        $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        if (!$periodo_id) {
+            $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+        }
+
+        if ($this->params()->fromPost("action") == "editarEstado") {
+            $nuevoEstado = $this->params()->fromPost("nuevo_estado");
+            $motivoCambio = $this->params()->fromPost("motivo_cambio");
+            $id_usuario = $this->params()->fromPost("id_usuario");
+            $puntosActuales = floatval($this->params()->fromPost("puntos_actuales"));
+            
+            $estadoAnterior = $solicitud[0]["id_estado"];
+            $user = $userTable->getUserById($id_usuario);
+            
+            // Actualizar estado de la solicitud
+            $params = array(
+                "id_estado" => $nuevoEstado,
+                "mensaje" => $motivoCambio
+            );
+            
+            $result = $capacitacionTable->update($params, ["id_capacitacion" => $id_solicitud]);
+            
+            if ($result > 0) {
+                // Manejar puntos según el cambio de estado INCLUYENDO PERÍODO
+                $this->manejarCambioPuntosCapacitacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id);
+                
+                // Registrar en log
+                $estadoTexto = $this->getEstadoTexto($nuevoEstado);
+                $estadoAnteriorTexto = $this->getEstadoTexto($estadoAnterior);
+                
+                $logMessage = "Se cambió el estado de la solicitud de capacitación profesional ID: {$id_solicitud} " .
+                            "de '{$estadoAnteriorTexto}' a '{$estadoTexto}'. " .
+                            "Usuario afectado: {$user[0]['nombre']}. Motivo: {$motivoCambio}";
+                
+                $this->saveLog($id_admin, $logMessage);
+                $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
+                
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
+            }
+        }
 
         if ($this->params()->fromPost("action") == "rechazar") {
             $params = $this->params()->fromPost();
@@ -1194,77 +1615,66 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $capacitacionTable->update($params, ["id_capacitacion" => $id_solicitud]);
                 
             if ($result > 0) {
-                //$this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de capacitación profesional con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-           
         }
 
         if ($this->params()->fromPost("action") == "aceptar") {
             $params = array( "mensaje" => "Solicitud aceptada con éxito",
-                "id_estado" => '2' ); //cambiar a estado 2
+                "id_estado" => '2' );
 
             $resultado = $capacitacionTable->update($params, ["id_capacitacion" => $id_solicitud]);
             
-       // print_r($resultado);die;
             if ($resultado > 0) {
                 $id_usuario = $this->params()->fromPost("id_usuario");
-                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+                
+                // OBTENER PUNTOS POR PERÍODO
+                $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
                 $puntosActuales = $misPuntos ? $misPuntos[0]["capacitacion_profesional"] : 0;
                 $year = date("Y");
                 $auxPts = $this->params()->fromPost("puntos");
                 
                 if($misPuntos){
-                    
-                    //Ya hay puntos 
+                    //Ya hay puntos para este período
                     $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
-                  /*
-                    print_r('<br>puntosActuales = '.$puntosActuales);
-                    print_r('<br>auxPts = '.$auxPts);
-                    print_r('<br>nuevoPuntaje1 = '.$nuevoPuntaje);*/
                     if($nuevoPuntaje >= 8){
                         $nuevoPuntaje = 8;
-                    }else{
-                        $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);;
                     }
-                    /* //modificado a solicitud de CEDA 2025-02-18 13:00
-                    if($auxPts >= floatval($puntosActuales)){
-                        $nuevoPuntaje = $auxPts;
-                    }else{
-                        $nuevoPuntaje = $puntosActuales;
-                    }*/
-                    //print_r('<br>nuevoPuntaje2 = '.$nuevoPuntaje);
-                    //die;
-                    $params = array( "capacitacion_profesional" => $nuevoPuntaje,
-                    "year"=>$year);
-
-                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    $params = array( 
+                        "capacitacion_profesional" => $nuevoPuntaje,
+                        "year" => $year
+                    );
+                    $result = $puntosTable->update($params, ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]);
                     
                 }else{
-                    //No hay puntos
-                    $params = array( "capacitacion_profesional" => $auxPts,
-                                    "id_usuario" => $id_usuario,
-                                    "year"=>$year);
+                    //No hay puntos para este período
+                    $params = array( 
+                        "premios" => 0,
+                        "investigaciones" => 0,
+                        "formacion_academica" => 0,
+                        "cargos" => 0,
+                        "capacitacion_profesional" => $auxPts,
+                        "id_usuario" => $id_usuario,
+                        "id_periodo" => $periodo_id,
+                        "year" => $year
+                    );
                     $result = $puntosTable->insert($params);
                 }
 
                 $user = $userTable->getUserById($id_usuario);
-                // $this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
                 $this->saveLog($id_admin, 'Se acepto la solicitud de capacitación profesional con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-
         }
 
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
-
     }
 
     public function admFormacionAcademicaAction(){
@@ -1282,7 +1692,51 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $formacionTable->getSolicitud($id_solicitud);
-        //var_dump($solicitud);
+
+        // OBTENER EL PERÍODO DE LA SOLICITUD
+        $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        if (!$periodo_id) {
+            $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+        }
+
+        if ($this->params()->fromPost("action") == "editarEstado") {
+            $nuevoEstado = $this->params()->fromPost("nuevo_estado");
+            $motivoCambio = $this->params()->fromPost("motivo_cambio");
+            $id_usuario = $this->params()->fromPost("id_usuario");
+            $puntosActuales = floatval($this->params()->fromPost("puntos_actuales"));
+            
+            $estadoAnterior = $solicitud[0]["id_estado"];
+            $user = $userTable->getUserById($id_usuario);
+            
+            // Actualizar estado de la solicitud
+            $params = array(
+                "id_estado" => $nuevoEstado,
+                "mensaje" => $motivoCambio
+            );
+            
+            $result = $formacionTable->update($params, ["id_formacion_academica" => $id_solicitud]);
+            
+            if ($result > 0) {
+                // Manejar puntos según el cambio de estado INCLUYENDO PERÍODO
+                $this->manejarCambioPuntosFormacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id);
+                
+                // Registrar en log
+                $estadoTexto = $this->getEstadoTexto($nuevoEstado);
+                $estadoAnteriorTexto = $this->getEstadoTexto($estadoAnterior);
+                
+                $logMessage = "Se cambió el estado de la solicitud de formación académica ID: {$id_solicitud} " .
+                            "de '{$estadoAnteriorTexto}' a '{$estadoTexto}'. " .
+                            "Usuario afectado: {$user[0]['nombre']}. Motivo: {$motivoCambio}";
+                
+                $this->saveLog($id_admin, $logMessage);
+                $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
+                
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
+            }
+        }
 
         if ($this->params()->fromPost("action") == "rechazar") {
             $params = $this->params()->fromPost();
@@ -1296,14 +1750,12 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $formacionTable->update($params, ["id_formacion_academica" => $id_solicitud]);
                 
             if ($result > 0) {
-                //$this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de formación profesional con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-           
         }
 
         if ($this->params()->fromPost("action") == "aceptar") {
@@ -1312,50 +1764,291 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
             $resultado = $formacionTable->update($params, ["id_formacion_academica" => $id_solicitud]);
             
-
             if ($resultado > 0) {
                 $id_usuario = $this->params()->fromPost("id_usuario");
-                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
                 
+                // OBTENER PUNTOS POR PERÍODO
+                $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
                 $puntosActuales = $misPuntos ? $misPuntos[0]["formacion_academica"] : 0;
                 $year = date("Y");
                 $auxPts = $this->params()->fromPost("puntos");
+                
                 if($misPuntos){
-                    //Ya hay puntos 
-                    /*$nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
-                    if($nuevoPuntaje >= floatval($puntosActuales)){
-                        $nuevoPuntaje = $nuevoPuntaje;
-                    }*/
+                    // Tomar el mayor puntaje (lógica original)
                     if($auxPts >= floatval($puntosActuales)){
                         $nuevoPuntaje = $auxPts;
                     }else{
                         $nuevoPuntaje = $puntosActuales;
                     }
-                    $params = array( "formacion_academica" => $nuevoPuntaje,
-                    "year"=>$year);
-                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
+                    $params = array( 
+                        "formacion_academica" => $nuevoPuntaje,
+                        "year" => $year
+                    );
+                    $result = $puntosTable->update($params, ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]);
                     
                 }else{
-                    //No hay puntos
-                    $params = array( "formacion_academica" => $auxPts,
-                                    "id_usuario" => $id_usuario,
-                                    "year"=>$year);
+                    //No hay puntos para este período
+                    $params = array( 
+                        "premios" => 0,
+                        "investigaciones" => 0,
+                        "formacion_academica" => $auxPts,
+                        "cargos" => 0,
+                        "capacitacion_profesional" => 0,
+                        "id_usuario" => $id_usuario,
+                        "id_periodo" => $periodo_id,
+                        "year" => $year
+                    );
                     $result = $puntosTable->insert($params);
                 }
 
                 $user = $userTable->getUserById($id_usuario);
-                //$this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
                 $this->saveLog($id_admin, 'Se acepto la solicitud de formación académica con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-
         }
 
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
+    }
 
+    // Método auxiliar para manejar puntos de CARGOS
+    private function manejarCambioPuntosCargos($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id) {
+        $year = date("Y");
+        $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
+        $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["cargos"]) : 0;
+
+        // Si cambia de Aceptada (2) a Rechazada (3) o Ingresada (1) -> QUITAR puntos
+        if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
+            $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["cargos" => $nuevosPuntos, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            }
+        }
+        
+        // Si cambia de Rechazada (3) o Ingresada (1) a Aceptada (2) -> AGREGAR puntos
+        if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
+            $nuevoPuntaje = $puntosUsuario + $puntosActuales;
+            if ($nuevoPuntaje >= 4) {
+                $nuevoPuntaje = 4; // Máximo para cargos
+            }
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["cargos" => $nuevoPuntaje, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            } else {
+                $puntosTable->insert([
+                    "cargos" => $puntosActuales,
+                    "id_usuario" => $id_usuario,
+                    "id_periodo" => $periodo_id,
+                    "year" => $year
+                ]);
+            }
+        }
+    }
+
+    // Método auxiliar para manejar puntos de PREMIOS
+    private function manejarCambioPuntosPremios($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id) {
+        $year = date("Y");
+        $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
+        $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["premios"]) : 0;
+
+        if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
+            $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["premios" => $nuevosPuntos, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            }
+        }
+        
+        if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
+            $nuevoPuntaje = $puntosUsuario + $puntosActuales;
+            if ($nuevoPuntaje >= 2) {
+                $nuevoPuntaje = 2; // Máximo para premios
+            }
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["premios" => $nuevoPuntaje, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            } else {
+                $puntosTable->insert([
+                    "premios" => $puntosActuales,
+                    "id_usuario" => $id_usuario,
+                    "id_periodo" => $periodo_id,
+                    "year" => $year
+                ]);
+            }
+        }
+    }
+
+    // Método auxiliar para manejar puntos de FORMACIÓN ACADÉMICA
+    private function manejarCambioPuntosFormacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id) {
+        $year = date("Y");
+        $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
+        $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["formacion_academica"]) : 0;
+
+        if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
+            $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["formacion_academica" => $nuevosPuntos, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            }
+        }
+        
+        if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
+            $nuevoPuntaje = max($puntosUsuario, $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["formacion_academica" => $nuevoPuntaje, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            } else {
+                $puntosTable->insert([
+                    "formacion_academica" => $puntosActuales,
+                    "id_usuario" => $id_usuario,
+                    "id_periodo" => $periodo_id,
+                    "year" => $year
+                ]);
+            }
+        }
+    }
+
+    // Método auxiliar para manejar puntos de CAPACITACIÓN
+    private function manejarCambioPuntosCapacitacion($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id) {
+        $year = date("Y");
+        $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
+        $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["capacitacion_profesional"]) : 0;
+
+        if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
+            $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["capacitacion_profesional" => $nuevosPuntos, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            }
+        }
+        
+        if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
+            $nuevoPuntaje = $puntosUsuario + $puntosActuales;
+            if ($nuevoPuntaje >= 8) {
+                $nuevoPuntaje = 8; // Máximo para capacitación
+            }
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["capacitacion_profesional" => $nuevoPuntaje, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            } else {
+                $puntosTable->insert([
+                    "capacitacion_profesional" => $puntosActuales,
+                    "id_usuario" => $id_usuario,
+                    "id_periodo" => $periodo_id,
+                    "year" => $year
+                ]);
+            }
+        }
+    }
+
+    // Método auxiliar para manejar puntos de INVESTIGACIONES
+    private function manejarCambioPuntosInvestigaciones($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id) {
+        $year = date("Y");
+        $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
+        $puntosUsuario = $misPuntos ? floatval($misPuntos[0]["investigaciones"]) : 0;
+
+        if ($estadoAnterior == 2 && in_array($nuevoEstado, [1, 3])) {
+            $nuevosPuntos = max(0, $puntosUsuario - $puntosActuales);
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["investigaciones" => $nuevosPuntos, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            }
+        }
+        
+        if (in_array($estadoAnterior, [1, 3]) && $nuevoEstado == 2) {
+            $nuevoPuntaje = $puntosUsuario + $puntosActuales;
+            if ($nuevoPuntaje >= 6) {
+                $nuevoPuntaje = 6; // Máximo para investigaciones
+            }
+            
+            if ($misPuntos) {
+                $puntosTable->update(
+                    ["investigaciones" => $nuevoPuntaje, "year" => $year],
+                    ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]
+                );
+            } else {
+                $puntosTable->insert([
+                    "investigaciones" => $puntosActuales,
+                    "id_usuario" => $id_usuario,
+                    "id_periodo" => $periodo_id,
+                    "year" => $year
+                ]);
+            }
+        }
+    }
+
+    // En IndexController.php
+    public function cambiarEstadoMeritoAction() {
+        $id_merito = $this->params()->fromPost('id_merito');
+        $tabla = $this->params()->fromPost('tabla');
+        $nuevo_estado = $this->params()->fromPost('estado');
+        
+        // Obtener datos del mérito
+        $sql = "SELECT id_usuario FROM {$tabla} WHERE id = ?";
+        $statement = $this->adapter->createStatement($sql);
+        $result = $statement->execute([$id_merito]);
+        $merito = $result->current();
+        
+        if (!$merito) {
+            return new \Laminas\View\Model\JsonModel(['exito' => false, 'mensaje' => 'Mérito no encontrado']);
+        }
+        
+        // Obtener ID del nuevo estado
+        $sqlEstado = "SELECT id_estado FROM estado WHERE nombre_estado = ?";
+        $stmtEstado = $this->adapter->createStatement($sqlEstado);
+        $resultEstado = $stmtEstado->execute([$nuevo_estado]);
+        $estadoRow = $resultEstado->current();
+        $idEstado = $estadoRow['id_estado'];
+        
+        // Actualizar el mérito
+        $sqlUpdate = "UPDATE {$tabla} SET id_estado = ? WHERE id = ?";
+        $stmtUpdate = $this->adapter->createStatement($sqlUpdate);
+        $stmtUpdate->execute([$idEstado, $id_merito]);
+        
+        // IMPORTANTE: Recalcular todos los estados del docente después del cambio
+        $puntajeValidator = new \Meritos\Services\PuntajeValidatorService($this->adapter);
+        $puntajeValidator->recalcularEstadosDocente($merito['id_usuario']);
+        
+        return new \Laminas\View\Model\JsonModel(['exito' => true, 'mensaje' => 'Estado actualizado correctamente']);
+    }
+
+    private function getEstadoTexto($idEstado) {
+        switch($idEstado) {
+            case 1: return 'Ingresada';
+            case 2: return 'Aceptada';
+            case 3: return 'Rechazada';
+            default: return 'Desconocido';
+        }
     }
 
     public function admInvestigacionesAction(){
@@ -1374,6 +2067,51 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $id_solicitud = $this->params()->fromRoute('val2',0);
         $solicitud = $investigacionesTable->getSolicitud($id_solicitud);
 
+        // OBTENER EL PERÍODO DE LA SOLICITUD
+        $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        if (!$periodo_id) {
+            $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+        }
+
+        if ($this->params()->fromPost("action") == "editarEstado") {
+            $nuevoEstado = $this->params()->fromPost("nuevo_estado");
+            $motivoCambio = $this->params()->fromPost("motivo_cambio");
+            $id_usuario = $this->params()->fromPost("id_usuario");
+            $puntosActuales = floatval($this->params()->fromPost("puntos_actuales"));
+            
+            $estadoAnterior = $solicitud[0]["id_estado"];
+            $user = $userTable->getUserById($id_usuario);
+            
+            // Actualizar estado de la solicitud
+            $params = array(
+                "id_estado" => $nuevoEstado,
+                "mensaje" => $motivoCambio
+            );
+            
+            $result = $investigacionesTable->update($params, ["id_investigacion" => $id_solicitud]);
+            
+            if ($result > 0) {
+                // Manejar puntos según el cambio de estado INCLUYENDO PERÍODO
+                $this->manejarCambioPuntosInvestigaciones($puntosTable, $id_usuario, $puntosActuales, $estadoAnterior, $nuevoEstado, $periodo_id);
+                
+                // Registrar en log
+                $estadoTexto = $this->getEstadoTexto($nuevoEstado);
+                $estadoAnteriorTexto = $this->getEstadoTexto($estadoAnterior);
+                
+                $logMessage = "Se cambió el estado de la solicitud de investigaciones/publicaciones ID: {$id_solicitud} " .
+                            "de '{$estadoAnteriorTexto}' a '{$estadoTexto}'. " .
+                            "Usuario afectado: {$user[0]['nombre']}. Motivo: {$motivoCambio}";
+                
+                $this->saveLog($id_admin, $logMessage);
+                $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
+                
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            } else {
+                $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
+            }
+        }
+        
         if ($this->params()->fromPost("action") == "rechazar") {
             $params = $this->params()->fromPost();
             $params['id_estado'] = '3';
@@ -1386,14 +2124,12 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             $result = $investigacionesTable->update($params, ["id_investigacion" => $id_solicitud]);
                 
             if ($result > 0) {
-                //$this->sendEmail($user[0]['email'],$user[0]['nombre'], 'rechazada');
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de investigaciones/publicaciones con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-           
         }
 
         if ($this->params()->fromPost("action") == "aceptar") {
@@ -1404,107 +2140,372 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
             if ($resultado > 0) {
                 $id_usuario = $this->params()->fromPost("id_usuario");
-                $misPuntos = $puntosTable->getPuntosByUser($id_usuario);
+                
+                // OBTENER PUNTOS POR PERÍODO
+                $misPuntos = $puntosTable->getPuntosByUserPeriodo($id_usuario, $periodo_id);
                 $puntosActuales = $misPuntos ? $misPuntos[0]["investigaciones"] : 0;
                 $year = date("Y");
                 $auxPts = $this->params()->fromPost("puntos");
                 
                 if($misPuntos){
-                    
-                    //Ya hay puntos 
+                    //Ya hay puntos para este período
                     $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
-                  /*
-                    print_r('<br>puntosActuales = '.$puntosActuales);
-                    print_r('<br>auxPts = '.$auxPts);
-                    print_r('<br>nuevoPuntaje1 = '.$nuevoPuntaje);*/
                     if($nuevoPuntaje >= 6){
                         $nuevoPuntaje = 6;
-                    }else{
-                        $nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);;
                     }
-                     //modificado a solicitud de CEDA 2025-02-18 13:00*
+                    $params = array( 
+                        "investigaciones" => $nuevoPuntaje,
+                        "year" => $year
+                    );
+                    $result = $puntosTable->update($params, ["id_usuario" => $id_usuario, "id_periodo" => $periodo_id]);
                     
-                    $params = array( "investigaciones" => $nuevoPuntaje,
-                    "year"=>$year);
-
-                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
-                    
-                }
-                
-                /*
-                if($misPuntos){
-                    //Ya hay puntos 
-                    //$nuevoPuntaje = floatval($puntosActuales) + floatval($auxPts);
-                    // if($nuevoPuntaje >= floatval($puntosActuales)){
-                    //     $nuevoPuntaje = $nuevoPuntaje;
-                    // }
-                    if($auxPts >= floatval($puntosActuales)){
-                        $nuevoPuntaje = $auxPts;
-                    }else{
-                        $nuevoPuntaje = $puntosActuales;
-                    }
-                    $params = array( "investigaciones" => $nuevoPuntaje,
-                    "year"=>$year);
-                    $result = $puntosTable->update($params,  ["id_usuario" => $id_usuario]);
-                    
-                }*/
-                else{
-                    //No hay puntos
-                    $params = array( "investigaciones" => $auxPts,
-                                     "id_usuario" => $id_usuario,
-                                     "year"=>$year);
+                }else{
+                    //No hay puntos para este período
+                    $params = array( 
+                        "premios" => 0,
+                        "investigaciones" => $auxPts,
+                        "formacion_academica" => 0,
+                        "cargos" => 0,
+                        "capacitacion_profesional" => 0,
+                        "id_usuario" => $id_usuario,
+                        "id_periodo" => $periodo_id,
+                        "year" => $year
+                    );
                     $result = $puntosTable->insert($params);
                 }
 
                 $user = $userTable->getUserById($id_usuario);
-                //$this->sendEmail($user[0]['email'], $user[0]['nombre'], 'aceptada');
-                $this->saveLog($id_admin, 'Se rechazo la solicitud de investigaciones/publicaciones con id: ' . $id_solicitud);
+                $this->saveLog($id_admin, 'Se acepto la solicitud de investigaciones/publicaciones con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
                 $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
-
         }
 
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "solicitudData" => $solicitud]);
-
     }
 
+    private function obtenerPeriodoActivo() {
+        $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
+        
+        // Primero verificar períodos expirados
+        $this->verificarYActualizarPeriodosExpirados();
+        
+        $sql = $periodosTable->getSql();
+        $select = $sql->select();
+        $select->where(['estado' => 'activo']);
+        $select->order('fecha_fin DESC');
+        $select->limit(1);
+        
+        $periodoActivo = $periodosTable->selectWith($select)->toArray();
+        
+        return !empty($periodoActivo) ? $periodoActivo[0] : null;
+    }
+
+    // Verificar y actualizar períodos expirados
+    private function verificarYActualizarPeriodosExpirados() {
+        $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
+        
+        date_default_timezone_set('America/Guatemala');
+        $fechaHoraActual = new DateTime("now");
+        
+        // Obtener períodos activos que podrían haber expirado
+        $sql = $periodosTable->getSql();
+        $select = $sql->select();
+        $select->where(['estado' => 'activo']);
+        
+        $periodosActivos = $periodosTable->selectWith($select)->toArray();
+        
+        $periodosCerradosAutomaticamente = 0;
+        
+        foreach ($periodosActivos as $periodo) {
+            // Construir fecha y hora de expiración
+            $fechaFin = $periodo['fecha_fin'] . " " . $periodo['hora_fin'];
+            $fechaExpiracion = new DateTime($fechaFin);
+            
+            // Si el período ha expirado, cambiarlo a cerrado
+            if ($fechaHoraActual > $fechaExpiracion) {
+                try {
+                    // Actualizar el estado a cerrado
+                    $sqlUpdate = $periodosTable->getSql();
+                    $update = $sqlUpdate->update();
+                    $update->set(['estado' => 'inactivo']);
+                    $update->where(['id_periodo' => $periodo['id_periodo']]);
+                    $statement = $sqlUpdate->prepareStatementForSqlObject($update);
+                    $statement->execute();
+                    
+                    // Log del cambio automático
+                    $usuario = $this->authService->hasIdentity() && $this->authService->getIdentity()->getData() 
+                            ? $this->authService->getIdentity()->getData()["usuario"] 
+                            : 'SYSTEM';
+                    
+                    $this->saveLog(
+                        $usuario, 
+                        "Se desactivó automáticamente el período '{$periodo['nombre']}' (ID: {$periodo['id_periodo']}) por expiración de fecha/hora. Expiró: {$fechaFin}"
+                    );
+                    
+                    $periodosCerradosAutomaticamente++;
+                    
+                } catch (\Exception $e) {
+                    // Log del error si algo falla
+                    error_log("Error al cerrar período automáticamente ID {$periodo['id_periodo']}: " . $e->getMessage());
+                }
+            }
+        }
+        
+        // Si se cerraron períodos automáticamente, mostrar mensaje informativo
+        if ($periodosCerradosAutomaticamente > 0) {
+            $mensaje = $periodosCerradosAutomaticamente == 1 
+                    ? "Se cerró automáticamente 1 período por expiración de fecha/hora."
+                    : "Se cerraron automáticamente {$periodosCerradosAutomaticamente} períodos por expiración de fecha/hora.";
+            
+            $this->flashMessenger()->addInfoMessage($mensaje);
+        }
+        
+        return $periodosCerradosAutomaticamente;
+    }
+
+    /**
+     * Valida si un período tiene méritos asociados
+     * @param int $periodoId
+     * @return bool
+     */
+    private function validarMeritosPeriodo($periodoId)
+    {
+        $tablas = ['formacion_academica', 'premios', 'cargos', 'investigaciones', 'capacitacion_profesional'];
+        
+        foreach ($tablas as $tabla) {
+            try {
+                $sql = "SELECT 1 FROM {$tabla} WHERE id_periodo = ? LIMIT 1";
+                $statement = $this->adapter->createStatement($sql);
+                $result = $statement->execute([$periodoId]);
+                
+                // Si encuentra al menos 1 registro, tiene méritos
+                if ($result->current()) {
+                    return true;
+                }
+            } catch (\Exception $e) {
+                // Si hay error con una tabla, continúa con las demás
+                continue;
+            }
+        }
+        
+        return false;
+    }
 
     //Configuracion 
     public function configuracionAction(){
         if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() && $this->authService->getIdentity()->getRol() == 'admin') {
             return $this->redirect()->toRoute('home');
         }
+        
+        // VERIFICAR PERÍODOS EXPIRADOS AL CARGAR LA PÁGINA
+        $this->verificarYActualizarPeriodosExpirados();
+        
         //cambiar al layout administrativo...
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
         $id_admin = $this->authService->getIdentity()->getData()["usuario"];
-        $configuracionTable = new \ORM\Model\Entity\ConfiguracionTable($this->adapter);
-
-        $settings = $configuracionTable->getConfiguracion();
-
-        $params = $this->params()->fromPost();
         
-        if ($this->getRequest()->isPost()) {
-            $params = $this->params()->fromPost();
-            
-            $result = (!$settings) ? $configuracionTable->insert($params) : $configuracionTable->update($params);
-            //var_dump($result);
-            
-            if ($result > 0) {
-                $settings = $configuracionTable->getConfiguracion();
-                $this->saveLog($id_admin, 'Se actualizó la configuración general: ' . $params['nota']);
-                $this->flashMessenger()->addSuccessMessage('Configuración guardada con éxito');
-            } else {
-                $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar realizar la solicitud.');
-            }
+        // MANEJO DE PERÍODOS
+        $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
 
+        if ($this->getRequest()->isPost()) {
+            $action = $this->getRequest()->getPost('action');
+            
+            try {
+                switch ($action) {
+                    case 'crear_periodo':
+                        $data = [
+                            'nombre' => $this->getRequest()->getPost('nombre'),
+                            'descripcion' => $this->getRequest()->getPost('descripcion'),
+                            'fecha_inicio' => $this->getRequest()->getPost('fecha_inicio'),
+                            'fecha_fin' => $this->getRequest()->getPost('fecha_fin'),
+                            'hora_inicio' => $this->getRequest()->getPost('hora_inicio') ?: '00:00:00',
+                            'hora_fin' => $this->getRequest()->getPost('hora_fin') ?: '23:59:59',
+                            'estado' => $this->getRequest()->getPost('activar_ahora') ? 'activo' : 'inactivo'
+                        ];
+                        
+                        // Validar fechas
+                        if (strtotime($data['fecha_inicio']) >= strtotime($data['fecha_fin'])) {
+                            throw new \Exception("La fecha de fin debe ser posterior a la fecha de inicio.");
+                        }
+                        
+                        // Si se va a activar, desactivar solo períodos activos (no los cerrados)
+                        if ($data['estado'] === 'activo') {
+                            $sql = $periodosTable->getSql();
+                            $update = $sql->update();
+                            $update->set(['estado' => 'inactivo']);
+                            $update->where(['estado' => 'activo']);
+                            $statement = $sql->prepareStatementForSqlObject($update);
+                            $statement->execute();
+                        }
+                        
+                        $periodosTable->insert($data);
+                        $this->saveLog($id_admin, 'Se creó un nuevo período: ' . $data['nombre']);
+                        $this->flashMessenger()->addSuccessMessage('Período creado exitosamente.');
+                        break;
+                        
+                    case 'activar_periodo':
+                        $periodo_id = $this->getRequest()->getPost('periodo_id');
+                        
+                        // Solo desactivar períodos activos
+                        $sql = $periodosTable->getSql();
+                        $update = $sql->update();
+                        $update->set(['estado' => 'inactivo']);
+                        $update->where(['estado' => 'activo']);
+                        $statement = $sql->prepareStatementForSqlObject($update);
+                        $statement->execute();
+                        
+                        // Activar el período seleccionado
+                        $sql2 = $periodosTable->getSql();
+                        $update2 = $sql2->update();
+                        $update2->set(['estado' => 'activo']);
+                        $update2->where(['id_periodo' => $periodo_id]);
+                        $statement2 = $sql2->prepareStatementForSqlObject($update2);
+                        $statement2->execute();
+                        
+                        $this->saveLog($id_admin, 'Se activó el período ID: ' . $periodo_id);
+                        $this->flashMessenger()->addSuccessMessage('Período activado exitosamente.');
+                        break;
+
+                    case 'desactivar_periodo':
+                        $periodo_id = $this->getRequest()->getPost('periodo_id');
+                        
+                        $sql = $periodosTable->getSql();
+                        $update = $sql->update();
+                        $update->set(['estado' => 'inactivo']);
+                        $update->where(['id_periodo' => $periodo_id]);
+                        $statement = $sql->prepareStatementForSqlObject($update);
+                        $statement->execute();
+                        
+                        $this->saveLog($id_admin, 'Se desactivó el período ID: ' . $periodo_id);
+                        $this->flashMessenger()->addSuccessMessage('Período desactivado exitosamente.');
+                        break;
+                        
+                    case 'editar_periodo':
+                        $periodo_id = $this->getRequest()->getPost('periodo_id');
+                        $data = [
+                            'nombre' => $this->getRequest()->getPost('nombre'),
+                            'descripcion' => $this->getRequest()->getPost('descripcion'),
+                            'fecha_inicio' => $this->getRequest()->getPost('fecha_inicio'),
+                            'fecha_fin' => $this->getRequest()->getPost('fecha_fin'),
+                            'hora_inicio' => $this->getRequest()->getPost('hora_inicio') ?: '00:00:00',
+                            'hora_fin' => $this->getRequest()->getPost('hora_fin') ?: '23:59:59'
+                        ];
+                        
+                        if (strtotime($data['fecha_inicio']) >= strtotime($data['fecha_fin'])) {
+                            throw new \Exception("La fecha de fin debe ser posterior a la fecha de inicio.");
+                        }
+                        
+                        // Actualizar usando SQL directo
+                        $sql = $periodosTable->getSql();
+                        $update = $sql->update();
+                        $update->set($data);
+                        $update->where(['id_periodo' => $periodo_id]);
+                        $statement = $sql->prepareStatementForSqlObject($update);
+                        $statement->execute();
+                        
+                        $this->saveLog($id_admin, 'Se editó el período ID: ' . $periodo_id);
+                        $this->flashMessenger()->addSuccessMessage('Período actualizado exitosamente.');
+                        break;
+                        
+                    case 'cerrar_periodo':
+                        $periodo_id = $this->getRequest()->getPost('periodo_id');
+                        
+                        $sql = $periodosTable->getSql();
+                        $update = $sql->update();
+                        $update->set(['estado' => 'cerrado']);
+                        $update->where(['id_periodo' => $periodo_id]);
+                        $statement = $sql->prepareStatementForSqlObject($update);
+                        $statement->execute();
+                        
+                        $this->saveLog($id_admin, 'Se cerró definitivamente el período ID: ' . $periodo_id);
+                        $this->flashMessenger()->addSuccessMessage('Período cerrado.');
+                        break;
+                        
+                    case 'eliminar_periodo':
+                        $periodo_id = $this->getRequest()->getPost('periodo_id');
+                        
+                        // Verificar que no tenga méritos asociados
+                        $tieneMeritos = false;
+                        $detalleMeritos = [];
+                        $totalMeritos = 0;
+                        
+                        // Verificar en todas las tablas de méritos
+                        $tablas = [
+                            'formacion_academica' => 'Formación Académica',
+                            'premios' => 'Premios',
+                            'cargos' => 'Cargos',
+                            'investigaciones' => 'Investigaciones',
+                            'capacitacion_profesional' => 'Capacitación Profesional'
+                        ];
+                        
+                        foreach ($tablas as $tabla => $categoria) {
+                            try {
+                                // Crear la consulta para cada tabla
+                                $sql = "SELECT COUNT(*) as count FROM {$tabla} WHERE id_periodo = ?";
+                                $statement = $this->adapter->createStatement($sql);
+                                $result = $statement->execute([$periodo_id]);
+                                $row = $result->current();
+                                
+                                if ($row['count'] > 0) {
+                                    $tieneMeritos = true;
+                                    $detalleMeritos[] = "{$categoria}: {$row['count']} mérito(s)";
+                                    $totalMeritos += $row['count'];
+                                }
+                            } catch (\Exception $e) {
+                                // Continuar con la siguiente tabla si hay error
+                                continue;
+                            }
+                        }
+                        
+                        if ($tieneMeritos) {
+                            // Construir mensaje detallado
+                            $mensajeDetalle = implode('<br>• ', $detalleMeritos);
+                            $mensajeCompleto = "No se puede eliminar este período porque tiene <strong>{$totalMeritos} mérito(s)</strong> asociado(s):<br><br>• {$mensajeDetalle}<br><br>Solo se pueden eliminar períodos sin méritos asociados.";
+                            
+                            $this->flashMessenger()->addErrorMessage($mensajeCompleto);
+                            $this->saveLog($id_admin, "Intento fallido de eliminar período ID: {$periodo_id} - Tiene {$totalMeritos} méritos asociados");
+                        } else {
+                            // Si no tiene méritos, proceder con la eliminación
+                            $sql = $periodosTable->getSql();
+                            $update = $sql->update();
+                            $update->set(['estado' => 'eliminado']);
+                            $update->where(['id_periodo' => $periodo_id]);
+                            $statement = $sql->prepareStatementForSqlObject($update);
+                            $result = $statement->execute();
+                            
+                            $this->saveLog($id_admin, 'Se eliminó el período ID: ' . $periodo_id);
+                            $this->flashMessenger()->addSuccessMessage('Período eliminado exitosamente.');
+                        }
+                        break;
+                    default:
+                        throw new \Exception("Acción no válida.");
+                }
+                
+            } catch (\Exception $e) {
+                $this->flashMessenger()->addErrorMessage($e->getMessage());
+            }
+            
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "configuracion"]);
         }
 
-        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "settings" => $settings]);
+        // Obtener todos los períodos (después de la verificación automática)
+        $periodos = $periodosTable->getAllPeriodos();
+
+        // Validar méritos asociados para cada período
+        foreach ($periodos as &$periodo) {
+            $periodo['tiene_meritos'] = $this->validarMeritosPeriodo($periodo['id_periodo']);
+            $periodo['puede_eliminar'] = !$periodo['tiene_meritos'];
+        }
+
+        return new ViewModel([
+            'data' => $this->authService->getIdentity()->getData(),
+            'periodos' => $periodos,
+        ]);
     }
 
     public function reportesAction(){
@@ -1645,6 +2646,120 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
         $data = $informesTable->getInformes();
         return new ViewModel(["informes" => $data, "acceso" => $this->acceso, "data" => $this->authService->getIdentity()->getData()]);
+    }
+
+    /**
+     * Obtener años disponibles en el sistema
+     */
+    private function obtenerAñosDisponibles() {
+        $tablas = ['premios', 'cargos', 'capacitacion_profesional', 'formacion_academica', 'investigaciones'];
+        $años = [];
+
+        foreach ($tablas as $tabla) {
+            try {
+                $sql = "SELECT DISTINCT YEAR(created_at) as año FROM {$tabla} WHERE created_at IS NOT NULL ORDER BY año DESC";
+                $statement = $this->adapter->createStatement($sql);
+                $result = $statement->execute();
+                
+                foreach ($result as $row) {
+                    if ($row['año'] && !in_array($row['año'], $años)) {
+                        $años[] = $row['año'];
+                    }
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        rsort($años);
+        
+        if (empty($años)) {
+            $añoActual = date('Y');
+            for ($i = $añoActual; $i >= 2024; $i--) {
+                $años[] = $i;
+            }
+        }
+        
+        return $años;
+    }
+
+    /* Vista historial */
+    public function historialAction(){
+        if (!$this->authService->hasIdentity() || !$this->authService->getIdentity() instanceof \Auth\Model\AuthEntity || !$this->authService->getIdentity()->isAutenticado() || $this->authService->getIdentity()->getRol() != 'admin') {
+            return $this->redirect()->toRoute('home');
+        }
+        
+        $this->layout()->setTemplate('layout/layoutAdmon');
+        $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
+
+        // Obtener filtros
+        $añoFiltro = $this->params()->fromQuery('año', date('Y'));
+        $estadoFiltro = $this->params()->fromQuery('estado', 'todos');
+        $categoriaFiltro = $this->params()->fromQuery('categoria', 'todas');
+
+        // Obtener años disponibles
+        $añosDisponibles = $this->obtenerAñosDisponibles();
+
+        // Convertir estado a ID
+        $estadoId = null;
+        if ($estadoFiltro !== 'todos') {
+            switch(strtolower($estadoFiltro)) {
+                case 'ingresada':
+                    $estadoId = 1;
+                    break;
+                case 'aceptada':
+                    $estadoId = 2;
+                    break;
+                case 'rechazada':
+                    $estadoId = 3;
+                    break;
+            }
+        }
+
+        // Obtener méritos según filtros
+        $premios = [];
+        $cargos = [];
+        $formacion = [];
+        $capacitacion = [];
+        $investigaciones = [];
+
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'premios') {
+            $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
+            $premios = $premiosTable->getPremiosAño($añoFiltro, $estadoId);
+        }
+
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'cargos') {
+            $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
+            $cargos = $cargosTable->getCargosAño($añoFiltro, $estadoId);
+        }
+
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'formacion') {
+            $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
+            $formacion = $formacionTable->getFormacionAcademicaAño($añoFiltro, $estadoId);
+        }
+
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'capacitacion') {
+            $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
+            $capacitacion = $capacitacionTable->getCapacitacionAño($añoFiltro, $estadoId);
+        }
+
+        if ($categoriaFiltro === 'todas' || $categoriaFiltro === 'investigaciones') {
+            $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
+            $investigaciones = $investigacionesTable->getInvestigacionesAño($añoFiltro, $estadoId);
+        }
+
+        return new ViewModel([
+            "data" => $this->authService->getIdentity()->getData(),
+            "premios" => $premios,
+            "cargos" => $cargos,
+            "formacion" => $formacion,
+            "capacitacion" => $capacitacion,
+            "investigaciones" => $investigaciones,
+            "añoActual" => $añoFiltro,
+            "estadoActual" => $estadoFiltro,
+            "categoriaActual" => $categoriaFiltro,
+            "añosDisponibles" => $añosDisponibles
+        ]);
     }
 
 }

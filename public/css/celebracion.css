@@ -1,0 +1,140 @@
+/* Mensaje de felicitaciones */
+.celebration-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px 40px;
+    border-radius: 20px;
+    font-size: 28px;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: messageAnimation 7s ease-in-out;
+    opacity: 0;
+    max-width: 600px;
+}
+
+@keyframes messageAnimation {
+    0% { 
+        opacity: 0; 
+        transform: translate(-50%, -50%) scale(0.3) rotateY(180deg); 
+    }
+    15% { 
+        opacity: 1; 
+        transform: translate(-50%, -50%) scale(1.1) rotateY(0deg); 
+    }
+    85% { 
+        opacity: 1; 
+        transform: translate(-50%, -50%) scale(1) rotateY(0deg); 
+    }
+    100% { 
+        opacity: 0; 
+        transform: translate(-50%, -50%) scale(0.8) rotateY(-180deg); 
+    }
+}
+
+/* Mantener el resto del CSS igual... */
+.celebration-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 9999;
+    overflow: hidden;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #ff6b6b;
+    animation: confetti-fall 3s linear infinite;
+}
+
+.confetti:nth-child(odd) { background: #4ecdc4; }
+.confetti:nth-child(3n) { background: #45b7d1; }
+.confetti:nth-child(4n) { background: #96ceb4; }
+.confetti:nth-child(5n) { background: #ffeaa7; }
+.confetti:nth-child(6n) { background: #fd79a8; }
+.confetti:nth-child(7n) { background: #fdcb6e; }
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(-100vh) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+.balloon {
+    position: absolute;
+    width: 80px;
+    height: 100px;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    animation: balloon-float 4s ease-in-out;
+}
+
+.balloon::after {
+    content: '';
+    position: absolute;
+    width: 2px;
+    height: 80px;
+    background: #333;
+    bottom: -80px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.balloon-red { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+.balloon-blue { background: linear-gradient(135deg, #74b9ff, #0984e3); }
+.balloon-green { background: linear-gradient(135deg, #00b894, #00a085); }
+.balloon-yellow { background: linear-gradient(135deg, #fdcb6e, #e17055); }
+.balloon-purple { background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+
+@keyframes balloon-float {
+    0% {
+        transform: translateY(100vh) rotate(-10deg);
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+    }
+    80% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-100vh) rotate(10deg);
+        opacity: 0;
+    }
+}
+
+.star {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: #ffd700;
+    border-radius: 50%;
+    animation: twinkle 2s infinite;
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0; transform: scale(0); }
+    50% { opacity: 1; transform: scale(1); }
+}
+
+.celebration-fade-out {
+    animation: fadeOut 1.5s ease-out forwards;
+}
+
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}

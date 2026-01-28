@@ -246,3 +246,6 @@ credentials.json
 !.gitkeep
 !README.md
 !.htaccess
+
+archivos/*
+!archivos/.gitkeep

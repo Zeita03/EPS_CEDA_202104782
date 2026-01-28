@@ -231,7 +231,6 @@ function cargarDialogActualizar(data) {
   funcionActual = "update";
   $("#btn-agregar-aceptar").text("Actualizar");
   for (var k in data) {
-    console.log(data[k]);
     if (typeof data[k] !== "function") {
       $("#form-add input[name='" + k + "']").val(data[k]);
       $("#form-add select[name='" + k + "']").val(data[k]);
@@ -257,17 +256,13 @@ function cargarDialogAsignacionOpciones(data, id, id_form) {
   $(id_form + " input.id-asociacion").val(id);
   $(id_form + " input[name^='check").prop("checked", false);
   for (var k in data) {
-    //console.log(data[k]);
-    // $(id_form + " input[name='check[" + data[k] + "]'").prop('checked', true);
     $(`#${data[k]}`).prop("checked", true);
   }
   $(id_form).dialog("open");
 }
 
 function cargarInfo(data) {
-  console.log(data);
   for (var k in data) {
-    console.log(data[k]);
     if (typeof data[k] !== "function") {
       $("input[name='" + k + "']").val(data[k]);
       $("select[name='" + k + "']").val(data[k]);
@@ -428,31 +423,91 @@ function validateFile(input) {
     alert("File size exceeds 2 MiB");
     // $(file).val(''); //for clearing with Jquery
   } else {
-    // Proceed further
-    console.log("Todo ok");
+    console.log("ok");
   }
 }
 
 function validarExtension(input) {
-  // var input = document.getElementById('archivo');
   var fileName = input.value;
   var extensionesPermitidas = /(\.pdf)$/i;
+  const maxSize = 6 * 1024 * 1024; // 6MB - límite máximo
+  const file = input.files[0];
 
+  // Validar que hay un archivo seleccionado
+  if (!file) {
+    return false;
+  }
+
+  // Validar extensión
   if (!extensionesPermitidas.exec(fileName)) {
-      Swal.fire({
-      title: 'Error',
-      text: 'La extensión del archivo no está permitida. Por favor, sube un archivo PDF.',
+    Swal.fire({
+      title: 'Error de formato',
+      text: 'Solo se permiten archivos PDF. Por favor, convierte tu archivo.',
       icon: 'error',
       confirmButtonText: 'Aceptar',
       confirmButtonColor: '#05142b',
-      });
-      input.value = '';
-      return false;
+    });
+    input.value = '';
+    return false;
   }
 
-  // El archivo tiene una extensión permitida (PDF)
-  // Puedes realizar acciones adicionales o enviar el formulario
+  const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+
+  // Si el archivo excede 6MB - Sugerir compresión online
+  if (file.size > maxSize) {
+    Swal.fire({
+      title: '⚠️ Archivo demasiado grande',
+      html: `<p>El archivo pesa <strong>${fileSizeMB}MB</strong>.</p>
+             <p>El límite máximo permitido es <strong>6MB</strong>.</p>
+             <hr>
+             <p><strong>📋 Por favor, comprime tu PDF usando UNA de estas herramientas gratuitas:</strong></p>
+             <div style="text-align: left; background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 15px 0;">
+               <p><strong style="color: #05142b;">🥇 Opción 1: PDF Candy (MÁS EFECTIVO)</strong></p>
+               <ol style="margin-left: 20px;">
+                 <li>Visita <a href="https://www.pdfcandy.com/es/compress-pdf.html" target="_blank" style="color: #05142b;"><u>PDF Candy</u></a></li>
+                 <li>Carga tu archivo PDF</li>
+                 <li>Espera a que se comprima</li>
+                 <li>Descarga el archivo comprimido</li>
+               </ol>
+
+               <p style="margin-top: 15px;"><strong style="color: #05142b;">🥈 Opción 2: IlovePDF</strong></p>
+               <ol style="margin-left: 20px;">
+                 <li>Visita <a href="https://www.ilovepdf.com/es/comprimir_pdf" target="_blank" style="color: #05142b;"><u>IlovePDF</u></a></li>
+                 <li>Selecciona tu PDF</li>
+                 <li>Comprime y descarga</li>
+               </ol>
+
+               <p style="margin-top: 15px;"><strong style="color: #05142b;">🥉 Opción 3: Online Converter</strong></p>
+               <ol style="margin-left: 20px;">
+                 <li>Visita <a href="https://www.onlineconverter.com/compress-pdf" target="_blank" style="color: #05142b;"><u>Online Converter</u></a></li>
+                 <li>Sube tu archivo</li>
+                 <li>Comprime y descarga</li>
+               </ol>
+             </div>
+             <hr>
+             <p style="font-size: 12px; color: #d9534f; background: #f8d7da; padding: 10px; border-radius: 4px; border-left: 4px solid #d9534f;">
+               <strong>⚠️ Nota importante:</strong> Es posible que estas herramientas no logren comprimir demasiado tu archivo, especialmente si contiene muchas imágenes de alta resolución. En ese caso, intenta:
+               <ul style="margin-top: 8px; margin-bottom: 0;">
+                 <li>Reducir la resolución de las imágenes</li>
+                 <li>Eliminar páginas innecesarias</li>
+                 <li>Probar con diferentes herramientas</li>
+                 <li>Recomendación: Elegir compresión máxima en las herramientas</li>
+               </ul>
+             </p>
+             <hr>
+             <p style="font-size: 12px; color: #666;"><strong>💡 Consejo:</strong> Intenta primero con PDF Candy, generalmente comprime más que las otras.</p>`,
+      icon: 'warning',
+      confirmButtonText: 'Entendido, voy a comprimir',
+      confirmButtonColor: '#05142b',
+      width: '650px'
+    });
+    input.value = '';
+    return false;
   }
+
+  // Archivo válido (menor o igual a 6MB)
+  return true;
+}
 
 
 // Example starter JavaScript for disabling form submissions if there are invalid fields
@@ -553,7 +608,6 @@ function validateSubCategoriaDocument(selectObject) {
 function validateFormacion(selectObject) {
   const value = selectObject.value;
   if (value == "nivel_intermedio") {
-    console.log("Es nivel intermedio");
     document.querySelector("#graduado").checked = true;
     document.querySelector("#pensum").disabled = true;
     document.querySelector("#label_year").innerHTML = "Año de graduación *";
@@ -776,7 +830,6 @@ function validatePtsEvent(selectObject) {
   const value = selectObject.value;
   //console.log(value);
   let valueObject = eventosSelect.find((e) => e.value == value);
-  console.log(valueObject);
   setMinAndMax(valueObject.min, valueObject.max);
 
   document.querySelector("#label_pts").innerHTML = valueObject.puntos;
@@ -814,6 +867,18 @@ function openModalAdm() {
 
 function closeModalAdm() {
   $("#modalSolicitudes").modal("toggle");
+}
+
+function openModalEditar() {
+    let puntosActuales = document.querySelector("#puntos").value;
+    document.getElementById("puntosActuales").value = puntosActuales;
+    
+    $('#modalEditarEstado').modal('show');
+}
+
+function closeModalEditar() {
+    $('#modalEditarEstado').modal('hide');
+    document.getElementById("formEditarEstado").reset();
 }
 
 const changeSelected = (e, id, value) => {

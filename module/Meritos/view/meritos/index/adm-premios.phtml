@@ -1,3 +1,4 @@
+<!-- Modal de rechazo -->
 <div class="modal fade" id="modalSolicitudes" tabindex="-1" aria-labelledby="modalSolicitudes" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -27,12 +28,68 @@
     </div>
 </div>
 
+<!-- Modal de edición de solicitud -->
+ <div class="modal fade" id="modalEditarEstado" tabindex="-1" aria-labelledby="modalEditarEstado" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tituloModalEditar">Cambiar estado de solicitud</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" onclick="closeModalEditar()">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" id="formEditarEstado">
+                    <div class="row mb-3">
+                        <div class="col-sm-6">
+                            <label for="estadoActual" class="form-label">Estado actual:</label>
+                            <input type="text" class="form-control" id="estadoActual" readonly 
+                                   value="<?= $this->solicitudData[0]["nombre_estado"] ?>">
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="nuevoEstado" class="form-label">Nuevo estado:</label>
+                            <select class="form-control" id="nuevoEstado" name="nuevo_estado" required>
+                                <option value="">Seleccione nuevo estado</option>
+                                <?php if ($this->solicitudData[0]["id_estado"] == 2): // Si está Aceptada ?>
+                                    <option value="3">Rechazada</option>
+                                    <option value="1">Ingresada</option>
+                                <?php elseif ($this->solicitudData[0]["id_estado"] == 3): // Si está Rechazada ?>
+                                    <option value="2">Aceptada</option>
+                                    <option value="1">Ingresada</option>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="motivoCambio" class="form-label">Motivo del cambio de estado:</label>
+                        <textarea class="form-control" id="motivoCambio" name="motivo_cambio" rows="4" 
+                                  placeholder="Explique el motivo por el cual está cambiando el estado de esta solicitud..." required></textarea>
+                    </div>
+
+                    <input type='hidden' name='action' value='editarEstado' />
+                    <input type='hidden' name='id_usuario' value="<?= $this->solicitudData[0]["id_usuario"]; ?>" />
+                    <input type='hidden' name='puntos_actuales' value="" id="puntosActuales" />
+
+                    <div class="mt-3 d-flex justify-content-between">
+                        <button type="button" class="btn btn-secondary" onclick="closeModalEditar()">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-sync"></i> Cambiar Estado
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="row">
 
     <div class="">
 
-        <div class="row">
+        <div class="row d-flex justify-content-between">
+
+            <!-- CARD DE PUNTOS -->
             <div class="col-xl-3 col-md-6 mb-4">
                 <div class="card border-left-1 shadow h-100 py-2">
                     <div class="card-body">
@@ -45,6 +102,49 @@
                             <div class="col-auto">
                                 <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actualización de color por estado -->
+            <?php
+            $id_estado = $this->solicitudData[0]["id_estado"];
+            $claseColor = '';
+
+            switch ($id_estado) {
+                case 1:
+                    $claseColor = 'border-left-info';
+                    break;
+                case 2:
+                    $claseColor = 'border-left-success';
+                    break;
+                case 3:
+                    $claseColor = 'border-left-danger';
+                    break;
+                default:
+                    $claseColor = 'border-left-warning';
+                    break;
+            }
+            ?>
+
+            <!-- CARD DE EDICION DE ESTADO|ESTADO ACTUAL -->
+             <div class="col-xl-3 col-md-6 mb-4">
+                <div class="card <?= $claseColor ?> shadow h-100 py-2">
+                    <div class="card-body">
+                        <div class="row no-gutters align-items-center">
+                            <div class="col mr-2">
+                                <div class="text-xs font-weight-bold text-principal text-uppercase mb-1">
+                                    Solicitud en estado</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800"> <?= $this->solicitudData[0]["nombre_estado"] ?> </div>
+                            </div>
+                            <?php if ($this->solicitudData[0]["nombre_estado"] != "Ingresada"): ?>
+                                <div class="col-auto">
+                                    <button type="button" id="btnEditar" class="btn btn-primary" onclick="openModalEditar();">
+                                        <i class="fas fa-pencil"></i> Editar
+                                    </button>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -135,23 +235,25 @@
                         </div>
 
                         <h6 id="nota"></h6>
-
-                        <div class="container">
-                            <div class="row">
-                                <div class="col-sm">
-                                    <div class="mt-3">
-                                        <input type="submit" class="btn btn-primary" value="Aceptar" /> 
+                        
+                        <?php if (!in_array($this->solicitudData[0]["id_estado"], [2, 3])): ?>
+                            <div class="container">
+                                <div class="row">
+                                    <div class="col-sm">
+                                        <div class="mt-3">
+                                            <input type="submit" class="btn btn-primary" value="Aceptar" /> 
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="col-sm">
-                                    <div class="mt-3">
-                                        <a class="btn btn-danger" onclick="openModalAdm();">
-                                            Rechazar
-                                        </a>
+                                    <div class="col-sm">
+                                        <div class="mt-3">
+                                            <a class="btn btn-danger" onclick="openModalAdm();">
+                                                Rechazar
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        <?php endif; ?>
                         
                     </form>
 

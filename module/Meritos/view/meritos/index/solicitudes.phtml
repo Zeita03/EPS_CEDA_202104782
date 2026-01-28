@@ -1,7 +1,21 @@
 <div class="container-fluid">
 
     <!-- Page Heading -->
-    <h1 class="h3 mb-2 text-gray-800">Solicitudes</h1>
+    <h1 class="h3 mb-2 text-gray-800">
+        Solicitudes
+        <?php 
+        $titulos = [
+            'todas' => 'de Méritos Curriculares',
+            'premios' => '- Premios y Reconocimientos',
+            'investigaciones' => '- Investigaciones y Publicaciones',
+            'formacion' => '- Formación Académica',
+            'cargos' => '- Cargos Desempeñados',
+            'capacitacion' => '- Capacitación Profesional'
+        ];
+        $categoriaActual = isset($this->categoriaActual) ? $this->categoriaActual : 'todas';
+        echo $titulos[$categoriaActual] ?? 'de Méritos Curriculares';
+        ?>
+    </h1>
 
     <div class="modal fade" id="modalPdf" tabindex="-1" aria-labelledby="modalPdf" aria-hidden="true">
             <div class="modal-dialog modal-lg">
@@ -17,7 +31,6 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-dismiss="modal" onclick="closeModal()">Cerrar</button>
-
                     </div>
                 </div>
             </div>
@@ -26,11 +39,59 @@
     <!-- DataTales Example -->
     <div class="card shadow mb-4">
         <div class="card-header py-3">
-            <h6 class="m-0 font-weight-bold text-primary">Solicitudes de Meritos curriculares</h6>
+            <div class="row align-items-center">
+                <div class="col">
+                    <h6 class="m-0 font-weight-bold text-primary">Solicitudes de Meritos curriculares</h6>
+                </div>
+                <div class="col-auto">
+                    <div class="small text-muted">
+                        <?php
+                        // Contar por estados
+                        $contadores = ['Ingresada' => 0, 'Aceptada' => 0, 'Rechazada' => 0, 'Ingresada - Límite Alcanzado' => 0, 'Ingresada - Sin Efecto' => 0];
+                        
+                        foreach ([$this->premios, $this->cargos, $this->formacion, $this->capacitacion, $this->investigaciones] as $categoria) {
+                            foreach ($categoria as $item) {
+                                if (isset($contadores[$item['nombre_estado']])) {
+                                    $contadores[$item['nombre_estado']]++;
+                                }
+                            }
+                        }
+                        ?>
+                        <span class="badge badge-info me-1">Ingresadas: <?= $contadores['Ingresada'] ?></span>
+                        <span class="badge badge-success me-1">Aceptadas: <?= $contadores['Aceptada'] ?></span> 
+                        <span class="badge badge-danger me-1">Rechazadas: <?= $contadores['Rechazada'] ?></span>
+                        <?php if ($contadores['Ingresada - Límite Alcanzado'] > 0): ?>
+                            <span class="badge badge-secondary me-1">Límite Alcanzado: <?= $contadores['Ingresada - Límite Alcanzado'] ?></span>
+                        <?php endif; ?>
+                        <?php if ($contadores['Ingresada - Sin Efecto'] > 0): ?>
+                            <span class="badge badge-dark">Sin Efecto: <?= $contadores['Ingresada - Sin Efecto'] ?></span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="card-body">
+            <!-- FILTRO POR ESTADO CON BOTÓN BUSCAR -->
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label for="estadoFilter" class="form-label">Filtrar por estado:</label>
+                    <select id="estadoFilter" class="form-control">
+                        <option value="Ingresada" selected>Ingresadas</option>
+                        <option value="Aceptada">Aceptadas</option>
+                        <option value="Rechazada">Rechazadas</option>
+                        <option value="Ingresada - Límite Alcanzado">Límite Alcanzado</option>
+                        <option value="Ingresada - Sin Efecto">Sin Efecto</option>
+                        <option value="">Todos los estados</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="button" id="btnBuscar" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+            </div>
+            
             <div class="table-responsive">
-                <!-- <table class="table table-bordered dtable" id="dataTable" width="100%" cellspacing="0"> -->
                 <table class="table table-striped dtable" id="dataTable" width="100%" cellspacing="0">
                     <thead>
                         <tr>
@@ -40,6 +101,7 @@
                             <th>Tipo de solicitud</th>
                             <th>Constancia</th>
                             <th>Estado solicitud</th>
+                            <th>Info Puntajes</th>
                             <th>Ver detalles de la solicitud</th>
                         </tr>
                     </thead>
@@ -55,13 +117,31 @@
                                         Constancia
                                     </a>
                                 </td>
-                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
                                 <td>
-                                    <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
-                                        <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admPremios" , "val1"=> "edit", "val2"=>$tmp["id_premio"]]) ?>">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                    <?php endif; ?>
+                                    <span class="badge badge-<?= $tmp["color"] ?>" 
+                                          data-toggle="tooltip" 
+                                          title="<?= $tmp["tooltip"] ?? '' ?>">
+                                        <?= $tmp["nombre_estado"] ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>
+                                        <strong>Categoría:</strong> <?= $tmp['puntaje_categoria_actual'] ?? 0 ?>/<?= $tmp['limite_categoria'] ?? 2 ?><br>
+                                        <strong>Total:</strong> <?= $tmp['puntaje_total_actual'] ?? 0 ?>/30
+                                        
+                                        <?php if (($tmp['categoria_limite_alcanzado'] ?? false)): ?>
+                                            <br><span class="text-success">✅ Límite de categoría alcanzado</span>
+                                        <?php endif; ?>
+                                        
+                                        <?php if (($tmp['limite_total_alcanzado'] ?? false)): ?>
+                                            <br><span class="text-warning">⚠️ Límite total alcanzado</span>
+                                        <?php endif; ?>
+                                    </small>
+                                </td>
+                                <td>
+                                    <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admPremios" , "val1"=> "edit", "val2"=>$tmp["id_premio"]]) ?>">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -76,13 +156,31 @@
                                         Constancia
                                     </a>
                                 </td>
-                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
                                 <td>
-                                    <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
-                                        <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admCargos" , "val1"=> "edit", "val2"=>$tmp["id_cargo"]]) ?>">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                    <?php endif; ?>
+                                    <span class="badge badge-<?= $tmp["color"] ?>" 
+                                          data-toggle="tooltip" 
+                                          title="<?= $tmp["tooltip"] ?? '' ?>">
+                                        <?= $tmp["nombre_estado"] ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>
+                                        <strong>Categoría:</strong> <?= $tmp['puntaje_categoria_actual'] ?? 0 ?>/<?= $tmp['limite_categoria'] ?? 4 ?><br>
+                                        <strong>Total:</strong> <?= $tmp['puntaje_total_actual'] ?? 0 ?>/30
+                                        
+                                        <?php if (($tmp['categoria_limite_alcanzado'] ?? false)): ?>
+                                            <br><span class="text-success">✅ Límite de categoría alcanzado</span>
+                                        <?php endif; ?>
+                                        
+                                        <?php if (($tmp['limite_total_alcanzado'] ?? false)): ?>
+                                            <br><span class="text-warning">⚠️ Límite total alcanzado</span>
+                                        <?php endif; ?>
+                                    </small>
+                                </td>
+                                <td>
+                                    <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admCargos" , "val1"=> "edit", "val2"=>$tmp["id_cargo"]]) ?>">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -97,13 +195,31 @@
                                         Constancia
                                     </a>
                                 </td>
-                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
                                 <td>
-                                    <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
-                                        <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admFormacionAcademica" , "val1"=> "edit", "val2"=>$tmp["id_formacion_academica"]]) ?>">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                    <?php endif; ?>
+                                    <span class="badge badge-<?= $tmp["color"] ?>" 
+                                          data-toggle="tooltip" 
+                                          title="<?= $tmp["tooltip"] ?? '' ?>">
+                                        <?= $tmp["nombre_estado"] ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>
+                                        <strong>Categoría:</strong> <?= $tmp['puntaje_categoria_actual'] ?? 0 ?>/<?= $tmp['limite_categoria'] ?? 10 ?><br>
+                                        <strong>Total:</strong> <?= $tmp['puntaje_total_actual'] ?? 0 ?>/30
+                                        
+                                        <?php if (($tmp['categoria_limite_alcanzado'] ?? false)): ?>
+                                            <br><span class="text-success">✅ Límite de categoría alcanzado</span>
+                                        <?php endif; ?>
+                                        
+                                        <?php if (($tmp['limite_total_alcanzado'] ?? false)): ?>
+                                            <br><span class="text-warning">⚠️ Límite total alcanzado</span>
+                                        <?php endif; ?>
+                                    </small>
+                                </td>
+                                <td>
+                                    <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admFormacionAcademica" , "val1"=> "edit", "val2"=>$tmp["id_formacion_academica"]]) ?>">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -119,14 +235,31 @@
                                         Constancia
                                     </a>
                                 </td>
-                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
                                 <td>
-                                     <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
-                                        <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admCapacitacionProfesional" , "val1"=> "edit", "val2"=>$tmp["id_capacitacion"]]) ?>">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                    <?php endif; ?>
-                                    
+                                    <span class="badge badge-<?= $tmp["color"] ?>" 
+                                          data-toggle="tooltip" 
+                                          title="<?= $tmp["tooltip"] ?? '' ?>">
+                                        <?= $tmp["nombre_estado"] ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>
+                                        <strong>Categoría:</strong> <?= $tmp['puntaje_categoria_actual'] ?? 0 ?>/<?= $tmp['limite_categoria'] ?? 8 ?><br>
+                                        <strong>Total:</strong> <?= $tmp['puntaje_total_actual'] ?? 0 ?>/30
+                                        
+                                        <?php if (($tmp['categoria_limite_alcanzado'] ?? false)): ?>
+                                            <br><span class="text-success">✅ Límite de categoría alcanzado</span>
+                                        <?php endif; ?>
+                                        
+                                        <?php if (($tmp['limite_total_alcanzado'] ?? false)): ?>
+                                            <br><span class="text-warning">⚠️ Límite total alcanzado</span>
+                                        <?php endif; ?>
+                                    </small>
+                                </td>
+                                <td>
+                                    <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admCapacitacionProfesional" , "val1"=> "edit", "val2"=>$tmp["id_capacitacion"]]) ?>">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -141,17 +274,34 @@
                                         Constancia
                                     </a>
                                 </td>
-                                <td> <span class="badge badge-<?= $tmp["color"] ?>" > <?= $tmp["nombre_estado"] ?> </span></td>
                                 <td>
-                                    <?php if ( $tmp["nombre_estado"] == 'Ingresada'): ?>
-                                        <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admInvestigaciones" , "val1"=> "edit", "val2"=>$tmp["id_investigacion"]]) ?>">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                    <?php endif; ?>
+                                    <span class="badge badge-<?= $tmp["color"] ?>" 
+                                          data-toggle="tooltip" 
+                                          title="<?= $tmp["tooltip"] ?? '' ?>">
+                                        <?= $tmp["nombre_estado"] ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <small>
+                                        <strong>Categoría:</strong> <?= $tmp['puntaje_categoria_actual'] ?? 0 ?>/<?= $tmp['limite_categoria'] ?? 6 ?><br>
+                                        <strong>Total:</strong> <?= $tmp['puntaje_total_actual'] ?? 0 ?>/30
+                                        
+                                        <?php if (($tmp['categoria_limite_alcanzado'] ?? false)): ?>
+                                            <br><span class="text-success">✅ Límite de categoría alcanzado</span>
+                                        <?php endif; ?>
+                                        
+                                        <?php if (($tmp['limite_total_alcanzado'] ?? false)): ?>
+                                            <br><span class="text-warning">⚠️ Límite total alcanzado</span>
+                                        <?php endif; ?>
+                                    </small>
+                                </td>
+                                <td>
+                                    <a class="btn btn-primary btn-sm1" href="<?= $this->url("meritosHome/meritos", ["action" => "admInvestigaciones" , "val1"=> "edit", "val2"=>$tmp["id_investigacion"]]) ?>">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
-
                     </tbody>
                 </table>
             </div>
@@ -159,3 +309,126 @@
     </div>
 
 </div>
+
+<?php
+$this->headScript()->appendScript('
+    $(document).ready(function() {
+
+        // Inicializar tooltips de Bootstrap
+        $("[data-toggle=\"tooltip\"]").tooltip();
+
+        // Configuración de idioma español local
+        var configuracionEspanol = {
+            "decimal": ",",
+            "emptyTable": "No hay datos disponibles en la tabla",
+            "info": "Mostrando _START_ a _END_ de _TOTAL_ entradas",
+            "infoEmpty": "Mostrando 0 a 0 de 0 entradas",
+            "infoFiltered": "(filtrado de _MAX_ entradas totales)",
+            "infoPostFix": "",
+            "thousands": ".",
+            "lengthMenu": "Mostrar _MENU_ entradas",
+            "loadingRecords": "Cargando...",
+            "processing": "Procesando...",
+            "search": "Buscar:",
+            "zeroRecords": "No se encontraron registros coincidentes",
+            "paginate": {
+                "first": "Primero",
+                "last": "Último",
+                "next": "Siguiente",
+                "previous": "Anterior"
+            },
+            "aria": {
+                "sortAscending": ": activar para ordenar la columna ascendente",
+                "sortDescending": ": activar para ordenar la columna descendente"
+            }
+        };
+
+        // Verificar si hay filas en el HTML ANTES de inicializar DataTable
+        var filasEnHTML = $("#dataTable tbody tr").length;
+        var table;
+
+        // Si DataTable ya existe, obtener la instancia SIN destruir
+        if ($.fn.DataTable.isDataTable("#dataTable")) {
+            table = $("#dataTable").DataTable();
+            
+            // Verificar datos en la instancia existente
+            if (table.rows().count() === 0) {
+                // Si la instancia está vacía, destruir y recrear
+                table.destroy();
+                
+                // Recrear DataTable
+                table = $("#dataTable").DataTable({
+                    "language": configuracionEspanol,
+                    "order": [[1, "asc"], [0, "desc"]],
+                    "pageLength": 25,
+                    "destroy": true,
+                    "responsive": true
+                });
+            }
+        } else {
+            // Crear nueva instancia
+            table = $("#dataTable").DataTable({
+                "language": configuracionEspanol,
+                "order": [[1, "asc"], [0, "desc"]],
+                "pageLength": 25,
+                "destroy": true,
+                "responsive": true
+            });
+        }
+
+        // Verificar estado final
+        var filasFinales = table.rows().count();
+        
+        if (filasFinales > 0) {
+            
+            // Verificar contenido de la columna de estado
+            var estadosUnicos = [];
+            table.column(5).data().each(function(value) {
+                var estadoLimpio = $(value).text().trim();
+                if (estadosUnicos.indexOf(estadoLimpio) === -1) {
+                    estadosUnicos.push(estadoLimpio);
+                }
+            });
+            
+            // Aplicar filtro inicial para mostrar solo "Ingresada"
+            table.column(5).search("Ingresada", false, false).draw();
+                    
+            // Event listener para el botón Buscar
+            $("#btnBuscar").off("click").on("click", function () {
+                var estadoSeleccionado = $("#estadoFilter").val();
+                
+                // Limpiar filtros anteriores
+                table.search("").columns().search("").draw();
+                
+                // Aplicar nuevo filtro si hay selección
+                if (estadoSeleccionado) {
+                    table.column(5).search(estadoSeleccionado, false, false);
+                }
+                
+                // Ordenar según el filtro aplicado
+                if (estadoSeleccionado === "Ingresada") {
+                    table.order([[1, "asc"], [0, "desc"]]).draw();
+                } else {
+                    table.order([[0, "desc"]]).draw();
+                }
+            });
+
+            $("#estadoFilter").off("keypress").on("keypress", function(e) {
+                if (e.which === 13) {
+                    $("#btnBuscar").click();
+                }
+            });
+        } else {
+            console.warn("No se pudo inicializar la tabla con datos - Verificando HTML...");
+            
+            if (filasEnHTML === 0) {
+                $("#dataTable tbody").html("<tr><td colspan=\"8\" class=\"text-center text-muted\"><i class=\"fas fa-info-circle\"></i> No hay solicitudes para mostrar en este momento</td></tr>");
+            }
+        }
+    });
+
+    function closeModal() {
+        $("#modalPdf").modal("hide");
+    }
+    ');
+?>

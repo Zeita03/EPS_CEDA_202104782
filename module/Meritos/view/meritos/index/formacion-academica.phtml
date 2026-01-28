@@ -379,7 +379,20 @@ cargarInfo(<?= json_encode($this->dataedit[0]) ?>);
 <!-- Fin edicion solicitud -->
 
 <script>
-    if('<?= $this->fecha ?>'){
-        contadorTiempoDisponible('<?= $this->fecha ?>');
+    const setFechaLimite = () => {
+        let currentYear = new Date().getFullYear();
+        
+        // Configurar el año máximo permitido (año actual)
+        const fechaInput = document.getElementById('fecha_obtencion');
+        if(fechaInput) {
+            fechaInput.max = currentYear;
+            fechaInput.min = 1950;
+        }
     }
+    setFechaLimite();
+
+    <?php if (isset($this->periodoActivo) && $this->periodoActivo): ?>
+        const fechaCompleta = '<?= $this->periodoActivo["fecha_fin"] ?>' + ' ' + '<?= $this->periodoActivo["hora_fin"] ?>';
+        contadorTiempoDisponible(fechaCompleta);
+    <?php endif; ?>
 </script>
