@@ -2601,6 +2601,15 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $informesTable = new \ORM\Model\Entity\InformeTable($this->adapter);
         $fileManager = new \Utilidades\Service\FileManager();
 
+        // Obtener período activo para validaciones
+        $periodoActivo = $this->obtenerPeriodoActivo();
+        
+        // Verificar si hay período activo para permitir subir informes
+        if (!$periodoActivo && $this->getRequest()->isPost()) {
+            $this->flashMessenger()->addErrorMessage('No hay un período activo para cargar informes.');
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "informes"]);
+        }
+
         if ($this->getRequest()->isPost()) {
             $params = $this->params()->fromPost();
             $file_name = $_FILES['subir_archivo']['name'];
@@ -2615,22 +2624,39 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
             $key = "url_informe";
             $params[$key] = $encripted_name;
+            
+            // AGREGAR EL PERÍODO ACTIVO AL INFORME
+            $params['id_periodo'] = $periodoActivo['id_periodo'];
 
             $result = $informesTable->insert($params);
             
             if ($result > 0) {
-                $this->saveLog($id, 'Se agrego un nuevo informe de actividades');
+                $this->saveLog($id, 'Se agregó un nuevo informe de actividades para el período: ' . $periodoActivo['nombre']);
                 $this->flashMessenger()->addSuccessMessage('Informe cargado correctamente');
             } else {
                 $this->saveLog($id, 'Error al realizar la solicitud');
                 $this->flashMessenger()->addErrorMessage('Ha ocurrido un error al intentar cargar el informe.');
             }
-
-
         }
 
-        $informes = $informesTable->getInformesByUser($id);
-        return new ViewModel(["informes" => $informes, "acceso" => $this->acceso, "data" => $this->authService->getIdentity()->getData()]);
+        // OBTENER INFORMES DEL ÚLTIMO PERÍODO (no solo del activo)
+        $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
+        $ultimoPeriodo = $periodosTable->getUltimoPeriodo();
+        
+        if ($ultimoPeriodo) {
+            $informes = $informesTable->getInformesByUserPeriodo($id, $ultimoPeriodo['id_periodo']);
+        } else {
+            $informes = [];
+        }
+
+        return new ViewModel([
+            "informes" => $informes, 
+            "acceso" => $this->acceso, 
+            "data" => $this->authService->getIdentity()->getData(),
+            "periodoActivo" => $periodoActivo,
+            "periodoActual" => $ultimoPeriodo,
+            "puedeSubir" => !empty($periodoActivo)
+        ]);
     }
 
 
@@ -2641,11 +2667,29 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
-   
-        $informesTable = new \ORM\Model\Entity\InformeTable($this->adapter);
 
-        $data = $informesTable->getInformes();
-        return new ViewModel(["informes" => $data, "acceso" => $this->acceso, "data" => $this->authService->getIdentity()->getData()]);
+        $informesTable = new \ORM\Model\Entity\InformeTable($this->adapter);
+        $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
+        
+        // Obtener el último período para mostrar informes
+        $ultimoPeriodo = $periodosTable->getUltimoPeriodo();
+        
+        if ($ultimoPeriodo && in_array($ultimoPeriodo['estado'], ['activo', 'inactivo'])) {
+            // Obtener informes del último período (no cerrado)
+            $data = $informesTable->getInformesByPeriodo($ultimoPeriodo['id_periodo']);
+            $periodoMostrado = $ultimoPeriodo;
+        } else {
+            // Si no hay período o está cerrado, mostrar array vacío
+            $data = [];
+            $periodoMostrado = null;
+        }
+
+        return new ViewModel([
+            "informes" => $data, 
+            "acceso" => $this->acceso, 
+            "data" => $this->authService->getIdentity()->getData(),
+            "periodoActual" => $periodoMostrado
+        ]);
     }
 
     /**

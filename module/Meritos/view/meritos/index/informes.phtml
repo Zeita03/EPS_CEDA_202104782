@@ -1,5 +1,5 @@
 <div class="container-fluid">
-    <class="col-12">
+    <div class="col-12">
         <center><h2>Informes de actividades</h2></center>
         <h7 id="nota" class="nota">Ponderación de informe:<br></h7>
         <h7>1. Actividades y metas = 15pts.<br></h7>
@@ -17,28 +17,24 @@
 
         <div id="dialog-add" title="Agregar informe de actividades">
             <form class="form needs-validation" method="POST" id="form-add-informe" enctype="multipart/form-data" novalidate>
+                <div class="form-group">
+                    <label for="">Archivo de informe de actividades *</label>
+                    <input type="file" class="form-control"  onchange="validarExtension(this)"
+                        id="archivo" name="subir_archivo" required>
+                    <div class="invalid-feedback">
+                        Por favor suba su informe
+                    </div>
 
-            <div class="form-group">
-                
-                <label for="">Archivo de informe de actividades *</label>
-                <input type="file" class="form-control"  onchange="validarExtension(this)"
-                    id="archivo" name="subir_archivo" required>
-                <div class="invalid-feedback">
-                    Por favor suba su informe
+                    <input type="hidden" class="form-control" value="<?= $this->data["usuario"]; ?>"
+                                    id="id_usuario" name="id_usuario">
+
+                    <div class="mt-3">
+                        <button class="btn-success btn pull-left" id="btn-agregar-aceptar" type="submit">Aceptar</button>
+                        <button class="btn-danger btn pull-right" id="btn-agregar-cancel" type="button">Cancelar</button>
+                    </div>
                 </div>
-
-                <input type="hidden" class="form-control" value="<?= $this->data["usuario"]; ?>"
-                                id="id_usuario" name="id_usuario">
-
-                <div class="mt-3">
-                    <button class="btn-success btn pull-left" id="btn-agregar-aceptar" type="submit">Aceptar</button>
-                    <button class="btn-danger btn pull-right" id="btn-agregar-cancel" type="button">Cancelar</button>
-                </div>
-
-            </div>
             </form>
         </div>
-
     <?php endif; ?>
 
     <div class="card shadow mb-4">
@@ -74,9 +70,4 @@
             </div>
         </div>
     </div>
-
-
 </div>
-
-
-
