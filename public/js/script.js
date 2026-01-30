@@ -430,7 +430,7 @@ function validateFile(input) {
 function validarExtension(input) {
   var fileName = input.value;
   var extensionesPermitidas = /(\.pdf)$/i;
-  const maxSize = 6 * 1024 * 1024; // 6MB - límite máximo
+  const maxSize = 6 * 1024 * 1024; // CAMBIAR TAMAÑO DE ARCHIVOS (CAMBIAR VALOR '6' POR LA CANTIDAD DE MB QUE SE NECESITEN)
   const file = input.files[0];
 
   // Validar que hay un archivo seleccionado
