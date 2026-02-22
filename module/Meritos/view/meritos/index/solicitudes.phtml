@@ -101,6 +101,7 @@
                             <th>Tipo de solicitud</th>
                             <th>Constancia</th>
                             <th>Estado solicitud</th>
+                            <th>Puntaje asignado</th>
                             <th>Info Puntajes</th>
                             <th>Ver detalles de la solicitud</th>
                         </tr>
@@ -108,7 +109,7 @@
                     <tbody>
                         <?php foreach ($this->premios as $tmp): ?>
                             <tr>
-                                <td><?= $tmp["updated_at"] ?></td>
+                                <td><?= $tmp["created_at"] ?></td>
                                 <td><?= $tmp["nombre"] ?></td>
                                 <td><?= $tmp["grado_academico"] ?></td>
                                 <td>Premios, menciones honoríficas y reconocimientos a nivel profesional</td>
@@ -124,6 +125,7 @@
                                         <?= $tmp["nombre_estado"] ?>
                                     </span>
                                 </td>
+                                <td><?= $tmp["puntos"] ?></td>
                                 <td>
                                     <small>
                                         <strong>Categoría:</strong> <?= $tmp['puntaje_categoria_actual'] ?? 0 ?>/<?= $tmp['limite_categoria'] ?? 2 ?><br>
@@ -147,7 +149,7 @@
                         <?php endforeach; ?>
                         <?php foreach ($this->cargos as $tmp): ?>
                             <tr>
-                                <td><?= $tmp["updated_at"] ?></td>
+                                <td><?= $tmp["created_at"] ?></td>
                                 <td><?= $tmp["nombre"] ?></td>
                                 <td><?= $tmp["grado_academico"] ?></td>
                                 <td>Cargos desempeñados</td>
@@ -163,6 +165,7 @@
                                         <?= $tmp["nombre_estado"] ?>
                                     </span>
                                 </td>
+                                <td><?= $tmp["puntos"] ?></td>
                                 <td>
                                     <small>
                                         <strong>Categoría:</strong> <?= $tmp['puntaje_categoria_actual'] ?? 0 ?>/<?= $tmp['limite_categoria'] ?? 4 ?><br>
@@ -186,7 +189,7 @@
                         <?php endforeach; ?>
                         <?php foreach ($this->formacion as $tmp): ?>
                             <tr>
-                                <td><?= $tmp["updated_at"] ?></td>
+                                <td><?= $tmp["created_at"] ?></td>
                                 <td><?= $tmp["nombre"] ?></td>
                                 <td><?= $tmp["grado_academico"] ?></td>
                                 <td>Formación profesional</td>
@@ -202,6 +205,7 @@
                                         <?= $tmp["nombre_estado"] ?>
                                     </span>
                                 </td>
+                                <td><?= $tmp["puntos"] ?></td>
                                 <td>
                                     <small>
                                         <strong>Categoría:</strong> <?= $tmp['puntaje_categoria_actual'] ?? 0 ?>/<?= $tmp['limite_categoria'] ?? 10 ?><br>
@@ -226,7 +230,7 @@
 
                         <?php foreach ($this->capacitacion as $tmp): ?>
                             <tr>
-                                <td><?= $tmp["updated_at"] ?></td>
+                                <td><?= $tmp["created_at"] ?></td>
                                 <td><?= $tmp["nombre"] ?></td>
                                 <td><?= $tmp["grado_academico"] ?></td>
                                 <td>Capacitación profesional: Relacionada con la docencia</td>
@@ -242,6 +246,7 @@
                                         <?= $tmp["nombre_estado"] ?>
                                     </span>
                                 </td>
+                                <td><?= $tmp["puntos"] ?></td>
                                 <td>
                                     <small>
                                         <strong>Categoría:</strong> <?= $tmp['puntaje_categoria_actual'] ?? 0 ?>/<?= $tmp['limite_categoria'] ?? 8 ?><br>
@@ -265,7 +270,7 @@
                         <?php endforeach; ?>
                         <?php foreach ($this->investigaciones as $tmp): ?>
                             <tr>
-                                <td><?= $tmp["updated_at"] ?></td>
+                                <td><?= $tmp["created_at"] ?></td>
                                 <td><?= $tmp["nombre"] ?></td>
                                 <td><?= $tmp["grado_academico"] ?></td>
                                 <td>Investigaciones y/o publicaciones realizadas</td>
@@ -281,6 +286,7 @@
                                         <?= $tmp["nombre_estado"] ?>
                                     </span>
                                 </td>
+                                <td><?= $tmp["puntos"] ?></td>
                                 <td>
                                     <small>
                                         <strong>Categoría:</strong> <?= $tmp['puntaje_categoria_actual'] ?? 0 ?>/<?= $tmp['limite_categoria'] ?? 6 ?><br>
@@ -347,58 +353,42 @@ $this->headScript()->appendScript('
         var filasEnHTML = $("#dataTable tbody tr").length;
         var table;
 
-        // Si DataTable ya existe, obtener la instancia SIN destruir
+        // Reinicializar DataTable con stateSave para asegurar que se guarden buscador y filtros
         if ($.fn.DataTable.isDataTable("#dataTable")) {
-            table = $("#dataTable").DataTable();
-            
-            // Verificar datos en la instancia existente
-            if (table.rows().count() === 0) {
-                // Si la instancia está vacía, destruir y recrear
-                table.destroy();
-                
-                // Recrear DataTable
-                table = $("#dataTable").DataTable({
-                    "language": configuracionEspanol,
-                    "order": [[1, "asc"], [0, "desc"]],
-                    "pageLength": 25,
-                    "destroy": true,
-                    "responsive": true
-                });
-            }
-        } else {
-            // Crear nueva instancia
-            table = $("#dataTable").DataTable({
-                "language": configuracionEspanol,
-                "order": [[1, "asc"], [0, "desc"]],
-                "pageLength": 25,
-                "destroy": true,
-                "responsive": true
-            });
+            $("#dataTable").DataTable().destroy();
         }
+        
+        table = $("#dataTable").DataTable({
+            "language": configuracionEspanol,
+            "order": [[1, "asc"], [0, "desc"]],
+            "pageLength": 25,
+            "responsive": true,
+            "stateSave": true
+        });
 
         // Verificar estado final
         var filasFinales = table.rows().count();
         
         if (filasFinales > 0) {
             
-            // Verificar contenido de la columna de estado
-            var estadosUnicos = [];
-            table.column(5).data().each(function(value) {
-                var estadoLimpio = $(value).text().trim();
-                if (estadosUnicos.indexOf(estadoLimpio) === -1) {
-                    estadosUnicos.push(estadoLimpio);
-                }
-            });
-            
-            // Aplicar filtro inicial para mostrar solo "Ingresada"
-            table.column(5).search("Ingresada", false, false).draw();
+            // Sincronizar el filtro de estado con el estado guardado de DataTables
+            var state = table.state.loaded();
+            if (state && state.columns && state.columns[5] && state.columns[5].search) {
+                // Sincronizar el select con el valor guardado (aunque sea cadena vacía para "Todos")
+                $("#estadoFilter").val(state.columns[5].search.search);
+            } else if (!state) {
+                // Solo si es una carga limpia (sin estado previo), aplicar filtro inicial "Ingresada"
+                table.column(5).search("Ingresada", false, false).draw();
+                $("#estadoFilter").val("Ingresada");
+            }
                     
             // Event listener para el botón Buscar
             $("#btnBuscar").off("click").on("click", function () {
                 var estadoSeleccionado = $("#estadoFilter").val();
                 
-                // Limpiar filtros anteriores
-                table.search("").columns().search("").draw();
+                // Limpiar filtros anteriores de columnas (manteniendo el buscador general si se desea, 
+                // pero aquí parece que se quiere una búsqueda limpia por estado)
+                table.columns().search("").draw();
                 
                 // Aplicar nuevo filtro si hay selección
                 if (estadoSeleccionado) {
