@@ -28,8 +28,11 @@ class BitacoraTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
     
     public function getAllLogs() {
         $select = $this->getSql()->select();
-        // $select->join(["e" => "usuario"], "e.usuario = bitacora.id_usuario");
-        $select->columns(['created_at','accion', 'id_bitacora'])->join(['u' => 'usuario'], 'bitacora.id_usuario = u.usuario', ['nombre', 'email']);
+        
+        $select->columns(['created_at', 'accion', 'id_bitacora'])
+            ->join(['u' => 'usuario'], 'bitacora.id_usuario = u.usuario', ['nombre', 'email'])
+            ->order('bitacora.id_bitacora DESC');
+
         return $this->selectWith($select)->toArray();
     }
 

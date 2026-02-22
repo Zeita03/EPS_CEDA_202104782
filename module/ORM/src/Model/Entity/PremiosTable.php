@@ -22,7 +22,7 @@ class PremiosTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
     public function getPremios() {
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = premios.id_estado");
-        $select->columns(['id_premio','nombre_premio', 'institucion', 'updated_at', 'url_constancia'])->join(['l' => 'usuario'], 'premios.id_usuario = l.usuario', ['nombre', 'grado_academico']);
+        $select->columns(['id_premio', 'institucion', 'updated_at', 'url_file'])->join(['l' => 'usuario'], 'premios.id_usuario = l.usuario', ['nombre', 'grado_academico']);
         $data = $this->selectWith($select)->toArray();
         return $data;
     }
