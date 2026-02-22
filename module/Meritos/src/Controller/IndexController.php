@@ -995,9 +995,15 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
         $ultimoPeriodo = $periodosTable->getUltimoPeriodo();
         
-        // Obtener filtro de categoría de la URL
-        $categoriaFiltro = $this->params()->fromRoute('val1', 'todas'); 
-
+        // Obtener filtro de categoría de la URL y guardarlo en sesión para persistencia
+        $session = new \Laminas\Session\Container('MeritosFilters');
+        $categoriaFiltro = $this->params()->fromRoute('val1'); 
+        
+        if ($categoriaFiltro) {
+            $session->lastCategory = $categoriaFiltro;
+        } else {
+            $categoriaFiltro = $session->lastCategory ?? 'todas';
+        }
         // Inicializar arrays vacíos
         $premios = [];
         $cargos = [];
@@ -1290,9 +1296,12 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
         // OBTENER EL PERÍODO DE LA SOLICITUD
         $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        $session = new \Laminas\Session\Container('MeritosFilters');
+        $lastCategory = $session->lastCategory ?? 'todas';
+
         if (!$periodo_id) {
             $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
-            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
         }
 
         if ($this->params()->fromPost("action") == "editarEstado") {
@@ -1327,7 +1336,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $this->saveLog($id_admin, $logMessage);
                 $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
                 
-                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
             }
@@ -1347,7 +1356,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             if ($result > 0) {
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de cargos desempeñados con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
-                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
@@ -1398,7 +1407,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $user = $userTable->getUserById($id_usuario);
                 $this->saveLog($id_admin, 'Se acepto la solicitud de cargos desempeñados con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
-                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
@@ -1425,9 +1434,12 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
         // OBTENER EL PERÍODO DE LA SOLICITUD
         $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        $session = new \Laminas\Session\Container('MeritosFilters');
+        $lastCategory = $session->lastCategory ?? 'todas';
+
         if (!$periodo_id) {
             $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
-            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
         }
 
         if ($this->params()->fromPost("action") == "editarEstado") {
@@ -1462,7 +1474,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $this->saveLog($id_admin, $logMessage);
                 $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
                 
-                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
             }
@@ -1482,7 +1494,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             if ($result > 0) {
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de premios con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
-                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
@@ -1533,7 +1545,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $user = $userTable->getUserById($id_usuario);
                 $this->saveLog($id_admin, 'Se acepto la solicitud de premios con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
-                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
@@ -1560,9 +1572,12 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
         // OBTENER EL PERÍODO DE LA SOLICITUD
         $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        $session = new \Laminas\Session\Container('MeritosFilters');
+        $lastCategory = $session->lastCategory ?? 'todas';
+
         if (!$periodo_id) {
             $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
-            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
         }
 
         if ($this->params()->fromPost("action") == "editarEstado") {
@@ -1597,7 +1612,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $this->saveLog($id_admin, $logMessage);
                 $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
                 
-                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
             }
@@ -1617,7 +1632,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             if ($result > 0) {
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de capacitación profesional con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
-                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
@@ -1668,7 +1683,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $user = $userTable->getUserById($id_usuario);
                 $this->saveLog($id_admin, 'Se acepto la solicitud de capacitación profesional con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
-                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
@@ -1695,9 +1710,12 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
         // OBTENER EL PERÍODO DE LA SOLICITUD
         $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        $session = new \Laminas\Session\Container('MeritosFilters');
+        $lastCategory = $session->lastCategory ?? 'todas';
+
         if (!$periodo_id) {
             $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
-            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
         }
 
         if ($this->params()->fromPost("action") == "editarEstado") {
@@ -1732,7 +1750,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $this->saveLog($id_admin, $logMessage);
                 $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
                 
-                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
             }
@@ -1752,7 +1770,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             if ($result > 0) {
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de formación profesional con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
-                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
@@ -1804,7 +1822,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $user = $userTable->getUserById($id_usuario);
                 $this->saveLog($id_admin, 'Se acepto la solicitud de formación académica con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
-                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
@@ -2069,9 +2087,12 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
 
         // OBTENER EL PERÍODO DE LA SOLICITUD
         $periodo_id = $solicitud[0]['id_periodo'] ?? null;
+        $session = new \Laminas\Session\Container('MeritosFilters');
+        $lastCategory = $session->lastCategory ?? 'todas';
+
         if (!$periodo_id) {
             $this->flashMessenger()->addErrorMessage('No se puede procesar la solicitud: período no identificado.');
-            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+            return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
         }
 
         if ($this->params()->fromPost("action") == "editarEstado") {
@@ -2106,7 +2127,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $this->saveLog($id_admin, $logMessage);
                 $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
                 
-                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
             }
@@ -2114,6 +2135,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         
         if ($this->params()->fromPost("action") == "rechazar") {
             $params = $this->params()->fromPost();
+            $mensaje = $this->params()->fromPost("mensaje");
             $params['id_estado'] = '3';
 
             $user = $userTable->getUserById($params['id_usuario']);
@@ -2122,11 +2144,14 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             unset($params['action']);
 
             $result = $investigacionesTable->update($params, ["id_investigacion" => $id_solicitud]);
+
+            $logMessage = "Se rechazó la solicitud de investigaciones/publicaciones con ID: {$id_solicitud} " .
+                            "Usuario afectado: {$user[0]['nombre']}. Motivo: {$mensaje}";
                 
             if ($result > 0) {
-                $this->saveLog($id_admin, 'Se rechazo la solicitud de investigaciones/publicaciones con id: ' . $id_solicitud);
+                $this->saveLog($id_admin, $logMessage);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
-                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
@@ -2177,7 +2202,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $user = $userTable->getUserById($id_usuario);
                 $this->saveLog($id_admin, 'Se acepto la solicitud de investigaciones/publicaciones con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud aceptada con éxito.');
-                $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes"]);
+                return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
             }
@@ -2583,7 +2608,6 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $logsTable = new \ORM\Model\Entity\BitacoraTable($this->adapter);
 
         $logs = $logsTable->getAllLogs();
-
 
         //var_dump($logs);
         return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "logs"=> $logs]);

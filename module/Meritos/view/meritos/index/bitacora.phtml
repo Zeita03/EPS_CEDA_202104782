@@ -30,11 +30,9 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <!-- <table class="table table-bordered dtable" id="dataTable" width="100%" cellspacing="0"> -->
-                <table class="table table-striped" id="tableLogs" width="100%" cellspacing="0">
+                <table class="table table-striped" id="tableLogs" width="100%" cellspacing="0" data-order='[[ 0, "desc" ]]'>
                     <thead>
                         <tr>
-                            <th>Id log</th>
                             <th>Fecha de acción</th>
                             <th>Usuario que realizo la acción</th>
                             <th>Descripción de la acción</th>
@@ -43,13 +41,11 @@
                     <tbody>
                         <?php foreach ($this->logs as $tmp): ?>
                             <tr>
-                                <td><?= $tmp["id_bitacora"] ?></td>
                                 <td><?= $tmp["created_at"] ?></td>
                                 <td><?= $tmp["email"] ?></td>
                                 <td><?= $tmp["accion"] ?></td>
                             </tr>
                         <?php endforeach; ?>
-
                     </tbody>
                 </table>
             </div>

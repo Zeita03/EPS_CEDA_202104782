@@ -23,7 +23,7 @@ class CapacitacionProfesionalTable extends \Laminas\Db\TableGateway\AbstractTabl
     public function getCapacitacionProfesional() {
         $select = $this->getSql()->select();
         $select->join(["e" => "estado"], "e.id_estado = capacitacion_profesional.id_estado");
-        $select->columns(['id_capacitacion','nombre_capacitacion', 'institucion', 'updated_at', 'url_constancia'])->join(['l' => 'usuario'], 'capacitacion_profesional.id_usuario = l.usuario', ['nombre', 'grado_academico']);
+        $select->columns(['id_capacitacion', 'institucion', 'updated_at', 'url_constancia'])->join(['l' => 'usuario'], 'capacitacion_profesional.id_usuario = l.usuario', ['nombre', 'grado_academico']);
         $data = $this->selectWith($select)->toArray();
         return $data;
     }
