@@ -2541,42 +2541,43 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
         $this->layout()->setTemplate('layout/layoutAdmon');
         $this->layout()->setVariable('userAuth', $this->authService->getIdentity());
 
+        $periodosTable = new \ORM\Model\Entity\PeriodosTable($this->adapter);
+        $ultimoPeriodo = $periodosTable->getUltimoPeriodo();
+        $id_periodo = $ultimoPeriodo ? $ultimoPeriodo['id_periodo'] : null;
 
         $userTable = new \ORM\Model\Entity\UsuarioTable($this->adapter);
+        $reporte1 = $userTable->getReporte1and2($id_periodo);
 
-        $reporte1 = $userTable->getReporte1and2();
-        // var_dump($reporte1);
-
-        //Obtenemos la lista de solicitudes  para el reporte 3
+        //Obtenemos la lista de solicitudes para el reporte 3 (Filtrado por último período)
         $premiosTable = new \ORM\Model\Entity\PremiosTable($this->adapter);
-        $premios = $premiosTable->getPremios();
-        $premiospendientes = $premiosTable->getPremiosByState('1');
-        $premiosAceptados = $premiosTable->getPremiosByState('2');
-        $premiosRechazados = $premiosTable->getPremiosByState('3');
+        $premios = $premiosTable->getByPeriodo($id_periodo);
+        $premiospendientes = array_filter($premios, function($p) { return $p['id_estado'] == '1'; });
+        $premiosAceptados = array_filter($premios, function($p) { return $p['id_estado'] == '2'; });
+        $premiosRechazados = array_filter($premios, function($p) { return $p['id_estado'] == '3'; });
 
         $cargosTable = new \ORM\Model\Entity\CargosTable($this->adapter);
-        $cargos = $cargosTable->getCargos();
-        $cargosPendientes = $cargosTable->getCargosByState('1');
-        $cargosAceptados = $cargosTable->getCargosByState('2');
-        $cargosRechazados = $cargosTable->getCargosByState('3');
+        $cargos = $cargosTable->getByPeriodo($id_periodo);
+        $cargosPendientes = array_filter($cargos, function($p) { return $p['id_estado'] == '1'; });
+        $cargosAceptados = array_filter($cargos, function($p) { return $p['id_estado'] == '2'; });
+        $cargosRechazados = array_filter($cargos, function($p) { return $p['id_estado'] == '3'; });
 
         $capacitacionTable = new \ORM\Model\Entity\CapacitacionProfesionalTable($this->adapter);
-        $capacitacionList = $capacitacionTable->getCapacitacionProfesional();
-        $capacitacionesPendientes = $capacitacionTable->getCapacitacionProfesionalByState('1');
-        $capacitacionesAceptados = $capacitacionTable->getCapacitacionProfesionalByState('2');
-        $capacitacionesRechazados = $capacitacionTable->getCapacitacionProfesionalByState('3');
+        $capacitacionList = $capacitacionTable->getByPeriodo($id_periodo);
+        $capacitacionesPendientes = array_filter($capacitacionList, function($p) { return $p['id_estado'] == '1'; });
+        $capacitacionesAceptados = array_filter($capacitacionList, function($p) { return $p['id_estado'] == '2'; });
+        $capacitacionesRechazados = array_filter($capacitacionList, function($p) { return $p['id_estado'] == '3'; });
         
         $formacionTable = new \ORM\Model\Entity\FormacionAcademicaTable($this->adapter);
-        $formacionList = $formacionTable->getFormacionAcademica();
-        $formacionesPendientes = $formacionTable->getFormacionAcademicaByState('1');
-        $formacionesAceptados = $formacionTable->getFormacionAcademicaByState('2');
-        $formacionesRechazados = $formacionTable->getFormacionAcademicaByState('3');
+        $formacionList = $formacionTable->getByPeriodo($id_periodo);
+        $formacionesPendientes = array_filter($formacionList, function($p) { return $p['id_estado'] == '1'; });
+        $formacionesAceptados = array_filter($formacionList, function($p) { return $p['id_estado'] == '2'; });
+        $formacionesRechazados = array_filter($formacionList, function($p) { return $p['id_estado'] == '3'; });
         
         $investigacionesTable = new \ORM\Model\Entity\InvestigacionesTable($this->adapter);
-        $investigaciones = $investigacionesTable->getInvestigaciones();
-        $investigacionesPendientes = $investigacionesTable->getInvestigacionesByState('1');
-        $investigacionesAceptados = $investigacionesTable->getInvestigacionesByState('2');
-        $investigacionesRechazados = $investigacionesTable->getInvestigacionesByState('3');
+        $investigaciones = $investigacionesTable->getByPeriodo($id_periodo);
+        $investigacionesPendientes = array_filter($investigaciones, function($p) { return $p['id_estado'] == '1'; });
+        $investigacionesAceptados = array_filter($investigaciones, function($p) { return $p['id_estado'] == '2'; });
+        $investigacionesRechazados = array_filter($investigaciones, function($p) { return $p['id_estado'] == '3'; });
 
         $reporte3 = array( "premios" => count($premios),
                 "cargos" => count($cargos),
@@ -2591,9 +2592,7 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             "rechazadas" => count($premiosRechazados) + count($cargosRechazados) + count($capacitacionesRechazados)+ count($formacionesRechazados) + count($investigacionesRechazados)
         );
 
-        //var_dump($contadores);
-
-        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataR1" => $reporte1, "dataR3" => $reporte3, "contadores" => $contadores]);
+        return new ViewModel(["data" => $this->authService->getIdentity()->getData(), "dataR1" => $reporte1, "dataR3" => $reporte3, "contadores" => $contadores, "periodoReporte" => $ultimoPeriodo]);
     }
 
 

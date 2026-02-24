@@ -118,11 +118,16 @@ class UsuarioTable extends \Laminas\Db\TableGateway\AbstractTableGateway {
 
 
 
-    public function getReporte1and2() {
+    public function getReporte1and2($id_periodo = null) {
         $select = $this->getSql()->select();
         //$select->columns(["usuario", "nombre", "email", "dpi", "registro_docente", "grado_academico" , "id_estado"]);
-        $select->columns(["usuario", "nombre", "email", "dpi", "registro_docente", "grado_academico" , "id_estado"])->join(['p' => 'puntos'], 'p.id_usuario = usuario.usuario', ['premios', 'investigaciones', 'formacion_academica', 'cargos',  'capacitacion_profesional', 'year']);
+        $select->columns(["usuario", "nombre", "email", "dpi", "registro_docente", "grado_academico" , "id_estado"])->join(['p' => 'puntos'], 'p.id_usuario = usuario.usuario', ['premios', 'investigaciones', 'formacion_academica', 'cargos',  'capacitacion_profesional', 'year', 'id_periodo']);
         $select->where->equalTo("usuario.id_estado", 1);
+        
+        if ($id_periodo) {
+            $select->where->equalTo("p.id_periodo", $id_periodo);
+        }
+        
         $data = $this->selectWith($select)->toArray();
 
         $dataReporte1 = [];
