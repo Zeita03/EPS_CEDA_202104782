@@ -426,6 +426,75 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
     }
 
     /**
+     * Enviar correo de notificación de rechazo de mérito
+     */
+    /**
+     * Enviar correo de notificación de rechazo de mérito
+     */
+    public function enviarConstanciaRechazo($email, $nameUser, $tipo, $motivo) {
+        $mailManager = new \Utilidades\Service\MailManager();
+        
+        $htmlMail = '<!DOCTYPE html>
+        <html lang="es" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
+        <head>
+            <title>Notificación de Estado de Solicitud</title>
+            <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+            <meta content="width=device-width,initial-scale=1" name="viewport" />
+            <link href="https://fonts.googleapis.com/css?family=Nunito:400,600,700" rel="stylesheet" type="text/css" />
+            <style>
+                * { box-sizing: border-box; }
+                body { margin: 0; padding: 0; font-family: \'Nunito\', Arial, sans-serif; -webkit-text-size-adjust: none; text-size-adjust: none; background-color: #f4f7f9; }
+                .container { width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+                .header { background: linear-gradient(180deg, #003470 0%, #041d3c 100%); padding: 30px; text-align: center; }
+                .content { padding: 40px 30px; color: #333333; line-height: 1.6; }
+                .footer { background-color: #041d3c; color: #ffffff; padding: 20px; text-align: center; font-size: 12px; }
+                .status-badge { background-color: #f8d7da; color: #721c24; padding: 8px 15px; border-radius: 20px; font-weight: bold; display: inline-block; margin-bottom: 20px; }
+                .reason-box { background-color: #f8f9fa; border-left: 4px solid #dc3545; padding: 20px; margin: 20px 0; border-radius: 4px; font-style: italic; }
+                .btn { display: inline-block; padding: 12px 25px; background-color: #003470; color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: 600; margin-top: 20px; }
+                .icon { font-size: 24px; vertical-align: middle; margin-right: 10px; }
+            </style>
+        </head>
+        <body>
+            <div class="container" style="margin-top: 50px; margin-bottom: 50px;">
+                <div class="header">
+                    <img src="https://farusac.edu.gt/wp-content/uploads/2022/10/headerfarusaclogos.png" alt="FARUSAC" style="max-width: 250px;">
+                </div>
+                <div class="content">
+                    <div style="text-align: center;">
+                        <div class="status-badge">❌ Solicitud Rechazada</div>
+                        <h2 style="color: #041d3c; margin-top: 0;">Hola: ' . $nameUser . '</h2>
+                    </div>
+                    
+                    <p style="font-size: 16px;">
+                        Le informamos que su solicitud de mérito académico del tipo <strong>"' . $tipo . '"</strong>, ha sido rechazada por el siguiente motivo:
+                    </p>
+                    
+                    <div class="reason-box">
+                        <strong>Motivo:</strong><br>
+                        ' . ($motivo ? $motivo : 'No se especificó un motivo detallado.') . '
+                    </div>
+                    
+                    <p style="font-size: 15px; color: #666;">
+                        <span class="icon">📧</span> Cualquier inconveniente no dude en contactarnos a través de los canales oficiales.
+                    </p>
+                    
+                    <div style="border-top: 1px solid #eee; margin-top: 30px; padding-top: 20px;">
+                        <p style="font-size: 13px; color: #888; font-style: italic;">
+                            ⚠️ <strong>Nota:</strong> Este correo electrónico se envió desde una dirección que no acepta mensajes entrantes. Por favor, no responda a este mensaje.
+                        </p>
+                    </div>
+                </div>
+                <div class="footer">
+                    &copy; ' . date('Y') . ' FARUSAC - Centro de Estudios de Diseño Académico (CEDA)
+                </div>
+            </div>
+        </body>
+        </html>';
+    
+        $mailManager->sendGeneralMessage($email, "CEDA - Notificación estado solicitud", $htmlMail);
+    }
+
+    /**
      * Validar si el usuario ha cargado al menos 1 mérito en cada categoría
      */
     private function validarMeritosPorCategoria($id_usuario) {
@@ -1336,6 +1405,11 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $this->saveLog($id_admin, $logMessage);
                 $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
                 
+                // Enviar correo si cambió de Aceptado (2) a Rechazado (3)
+                if ($estadoAnterior == 2 && $nuevoEstado == 3) {
+                    $this->enviarConstanciaRechazo($user[0]['email'], $user[0]['nombre'], 'Cargos Desempeñados', $motivoCambio);
+                }
+
                 return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
@@ -1356,6 +1430,10 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             if ($result > 0) {
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de cargos desempeñados con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
+                
+                // Enviar correo de rechazo
+                $this->enviarConstanciaRechazo($user[0]['email'], $user[0]['nombre'], 'Cargos Desempeñados', $params['mensaje']);
+
                 return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
@@ -1474,6 +1552,11 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $this->saveLog($id_admin, $logMessage);
                 $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
                 
+                // Enviar correo si cambió de Aceptado (2) a Rechazado (3)
+                if ($estadoAnterior == 2 && $nuevoEstado == 3) {
+                    $this->enviarConstanciaRechazo($user[0]['email'], $user[0]['nombre'], 'Premios y Distinciones', $motivoCambio);
+                }
+
                 return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
@@ -1494,6 +1577,10 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             if ($result > 0) {
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de premios con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
+                
+                // Enviar correo de rechazo
+                $this->enviarConstanciaRechazo($user[0]['email'], $user[0]['nombre'], 'Premios y Distinciones', $params['mensaje']);
+
                 return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
@@ -1612,6 +1699,11 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $this->saveLog($id_admin, $logMessage);
                 $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
                 
+                // Enviar correo si cambió de Aceptado (2) a Rechazado (3)
+                if ($estadoAnterior == 2 && $nuevoEstado == 3) {
+                    $this->enviarConstanciaRechazo($user[0]['email'], $user[0]['nombre'], 'Capacitación Profesional', $motivoCambio);
+                }
+
                 return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
@@ -1632,6 +1724,10 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             if ($result > 0) {
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de capacitación profesional con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
+                
+                // Enviar correo de rechazo
+                $this->enviarConstanciaRechazo($user[0]['email'], $user[0]['nombre'], 'Capacitación Profesional', $params['mensaje']);
+
                 return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
@@ -1750,6 +1846,11 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $this->saveLog($id_admin, $logMessage);
                 $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
                 
+                // Enviar correo si cambió de Aceptado (2) a Rechazado (3)
+                if ($estadoAnterior == 2 && $nuevoEstado == 3) {
+                    $this->enviarConstanciaRechazo($user[0]['email'], $user[0]['nombre'], 'Formación Académica', $motivoCambio);
+                }
+
                 return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
@@ -1770,6 +1871,10 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             if ($result > 0) {
                 $this->saveLog($id_admin, 'Se rechazo la solicitud de formación profesional con id: ' . $id_solicitud);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
+                
+                // Enviar correo de rechazo
+                $this->enviarConstanciaRechazo($user[0]['email'], $user[0]['nombre'], 'Formación Académica', $params['mensaje']);
+
                 return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
@@ -2127,6 +2232,11 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
                 $this->saveLog($id_admin, $logMessage);
                 $this->flashMessenger()->addSuccessMessage("Estado de solicitud cambiado exitosamente a: {$estadoTexto}");
                 
+                // Enviar correo si cambió de Aceptado (2) a Rechazado (3)
+                if ($estadoAnterior == 2 && $nuevoEstado == 3) {
+                    $this->enviarConstanciaRechazo($user[0]['email'], $user[0]['nombre'], 'Investigaciones y Publicaciones', $motivoCambio);
+                }
+
                 return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Error al cambiar el estado de la solicitud.');
@@ -2151,6 +2261,10 @@ class IndexController extends \Utilidades\BaseAbstract\Controller\BaseAbstractAc
             if ($result > 0) {
                 $this->saveLog($id_admin, $logMessage);
                 $this->flashMessenger()->addSuccessMessage('Solicitud rechazada con éxito.');
+                
+                // Enviar correo de rechazo
+                $this->enviarConstanciaRechazo($user[0]['email'], $user[0]['nombre'], 'Investigaciones y Publicaciones', $params['mensaje']);
+
                 return $this->redirect()->toRoute("meritosHome/meritos", ["action" => "solicitudes", "val1" => $lastCategory]);
             } else {
                 $this->flashMessenger()->addErrorMessage('Hubo un error al procesar su solicitud, por favor, intente de nuevo.');
